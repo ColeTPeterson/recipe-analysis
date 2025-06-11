@@ -1,0 +1,28 @@
+# Project environment
+.vscode/*
+.env
+.env.*
+!.env.example
+
+# Dataset
+dataset/*
+!dataset/mariadb
+!dataset/mongodb
+!dataset/recipe_schema.json
+
+# Included documentation
+docs/*
+!docs/recipe_classes.plantuml
+!docs/Recipe\ Classes.png
+!docs/relational_db.plantuml
+!docs/Relational\ Database\ Schema.png
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+
+# Docker
+docker-volumes/

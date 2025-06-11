@@ -1,0 +1,618 @@
+{
+    "$schema":"http://json-schema.org/draft-07/schema#",
+    "description": "Measurement components for recipe schema",
+    "type": "object",
+    "properties": {
+        "equipment": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/equipment" },
+            "description": "List of all equipment used in the recipe"
+        },
+        "id": {
+            "type": "string",
+            "description": "Unique identifier for the recipe (e.g. a UUID or a database ID string)"
+        },
+        "ingredients": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/ingredient" },
+            "description": "List of all ingredients required for the recipe"
+        },
+        "instructions": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/instruction" },
+            "description": "Sequential steps to prepare the recipe"
+        },
+        "rootInstructionIds": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "IDs of root instructions; those with no prerequisite steps"
+        },
+        "title": {
+            "type": "string",
+            "description": "The title of the recipe"
+        }
+    },
+    "required": ["id", "instructions", "rootInstructionIds", "title"],
+    "$defs": {
+        "baseCondition": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "state": {
+                            "oneOf" :[
+                                {"type": "string"},
+                                {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                }
+                            ],
+                            "description": "Physical state of an ingredient or mixture (e.g 'golden brown', 'bubbling')"
+                        }
+                    },
+                    "required": ["state"],
+                    "additionalProperties": false,
+                    "description": "Condition based on observable state"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "ingredient": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of the ingredient to monitor usage"
+                                },
+                                "quantity": {
+                                    "oneOf": [
+                                        {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "maximum": 1
+                                        },
+                                        {
+                                            "type": "string",
+                                            "enum": ["remaining"]
+                                        }
+                                    ],
+                                    "description": "Proportion of ingredient to be used (0 to 1, where 1 means fully consumed)"
+                                }
+                            },
+                            "required": ["name", "quantity"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "required": ["ingredient"],
+                    "additionalProperties": false,
+                    "description": "Condition based on a specific ingredient being consumed up to a certain quantity"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "ingredients": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Name of the ingredient to monitor usage"
+                                    },
+                                    "quantity": {
+                                        "oneOf": [
+                                            {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0,
+                                                "maximum": 1
+                                            },
+                                            {
+                                                "type": "string",
+                                                "enum": ["remaining"]
+                                            }
+                                        ],
+                                        "description": "Proportion of ingredient to be used (0 to 1, where 1 means fully consumed)"
+                                    }
+                                },
+                                "required": ["name", "quantity"],
+                                "additionalProperties": false
+                            },
+                            "minItems": 2,
+                            "description": "List of ingredients and their usage quantities"
+                        }
+                    },
+                    "required": ["ingredients"],
+                    "additionalProperties": false,
+                    "description": "Condition based on multiple ingredients being used up to certain quantities"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "duration": { "$ref": "#/$defs/duration" }
+                    },
+                    "required": ["duration"],
+                    "additionalProperties": false,
+                    "description": "Condition based on time duration"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "temperature": { "$ref": "#/$defs/temperature" }
+                    },
+                    "required": ["temperature"],
+                    "additionalProperties": false,
+                    "description": "Condition based on temperature measurement"
+                }
+            ],
+            "description": "Base condition types that can be used in logical expressions"
+        },
+        "baseEquipment": {
+            "allOf": [
+                { "$ref": "#/$defs/item" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "integer" }
+                    },
+                    "required": ["id"]
+                }
+            ],
+            "description": "A base piece of equipment that is not produced during the process"
+        },
+        "baseIngredient": {
+            "allOf": [
+                { "$ref": "#/$defs/item" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "integer" },
+                        "cutStyle": {
+                            "$ref": "#/$defs/symbolRef",
+                            "description": "Canonical form of a cut style (e.g. 'diced', 'minced', 'julienned')"
+                        },
+                        "measurement": {
+                            "$ref": "#/$defs/measurement",
+                            "description": "Total measurement for the recipe OR a specific instruction"
+                        },
+                        "optional": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "'true' if this ingredient is optional for the recipe"
+                        }
+                    }
+                }
+            ]
+        },
+        "dimensions": {
+            "oneOf": [
+                { "$ref": "#/$defs/dimensionsAbs" },
+                { "$ref": "#/$defs/dimensionsRel" }
+            ],
+            "description": "Absolute or relative physical dimensions (e.g. 13x9 pan or 9\" pie)"
+        },
+        "dimensionsAbs": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "$ref": "#/$defs/lengthUnit",
+                    "description": "Unit of measurement for dimensions (e.g. 'in', 'cm')"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "Array of 1-3 exact dimension values (e.g. [13, 9] for a 13x9 pan)"
+                }
+            },
+            "required": ["unit", "values"],
+            "description": "Exact dimensions (e.g. ([13, 9], 'in') for a 13x9\" pan)"
+        },
+        "dimensionsRel": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "$ref": "#/$defs/lengthUnit",
+                    "description": "Unit of measurement for dimensions (e.g. 'in', 'cm')"
+                },
+                "valuesMin": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "Array of 1-3 minimum dimension values for a range"
+                },
+                "valuesMax": {
+                    "type": "array",
+                    "items": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "Array of 1-3 maximum dimension values for a range"
+                }
+            },
+            "required": ["unit", "valuesMin", "valuesMax"],
+            "description": "Relative dimensions (e.g. (min=[8], max=[9], 'in.') for '8-9 in' or min=0)"
+        },
+        "duration": {
+            "oneOf": [
+                { "$ref": "#/$defs/durationAbs" },
+                { "$ref": "#/$defs/durationRel" }
+            ],
+            "description": "Time duration requiring either a single value or range of values, and a unit"
+        },
+        "durationAbs": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "$ref": "#/$defs/timeUnit",
+                    "description": "Unit of time measurement"
+                },
+                "value": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.1,
+                    "description": "Amount of time (non-negative, can be fractional)"
+                }
+            },
+            "required": ["unit", "value"],
+            "description": "An exact duration (e.g. 30 minutes)"
+        },
+        "durationRel": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "$ref": "#/$defs/timeUnit",
+                    "description": "Unit of time measurement"
+                },
+                "valueMin": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.1,
+                    "description": "Minimum amount of time in a range (e.g. 30 in '30-35 min')"
+                },
+                "valueMax": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.1,
+                    "description": "Maximum amount of time in a range (e.g. 35 in '30-35 min')"
+                }
+            },
+            "required": ["unit", "valueMin", "valueMax"],
+            "description": "A range for duration (e.g. 30-35 minutes)"
+        },
+        "equipment": {
+            "type": "object",
+            "oneOf": [
+                { "$ref": "#/$defs/baseEquipment" },
+                { "$ref": "#/$defs/intermediateEquipment" }
+            ],
+            "description": "A piece of equipment, either on its own or produced by an instruction"
+        },
+        "ingredient": {
+            "type": "object",
+            "oneOf": [
+                { "$ref": "#/$defs/baseIngredient" },
+                { "$ref": "#/$defs/intermediateIngredient" }
+            ],
+            "description": "An ingredient, either on its own or produced by an instruction"
+        },
+        "instruction": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "Unique persistent identifier for this Instruction within the Recipe."
+                },
+                "action": {
+                    "$ref": "#/$defs/symbolRef",
+                    "description": "The verb/action of the Instruction (e.g. 'mix', 'chop', 'bake')"
+                },
+                "duration": {
+                    "$ref": "#/$defs/duration",
+                    "description": "Time duration for the Instruction"
+                },
+                "equipment": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "description": "A value that represents a multiple of some equipment (e.g. '3 cake pans')"
+                            },
+                            "equipmentId": { "type": "integer" }
+                        },
+                        "required": ["equipmentId"]
+                    },
+                    "description": "Equipment used in this step, with optional count"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "description": "A value that represents a multiple of some Ingredient (e.g. '6 tart shells')"
+                            },
+                            "ingredientId": { "type": "integer" },
+                            "measurement": {
+                                "$ref": "#/$defs/measurement",
+                                "description": "Specific measure of an ingredient for the current instruction, if it differs from the total recipe amount."
+                            },
+                            "quantity": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "maximum": 1,
+                                "description": "Proportion (0-1) of the Ingredient's total or remaining measurement"
+                            }
+                        },
+                        "required": ["ingredientId"]
+                    },
+                    "description": "Ingredients used in this step, with optional count and proportions"
+                },
+                "nextInstructionIds": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "description": "IDs of Instructions that can begin after this one is completed"
+                },
+                "prerequisiteInstructionIds": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "description": "IDs of Instructions that must be completed before this one"
+                },
+                "producesItemId": {
+                    "type": "integer",
+                    "description": "ID of the Item (Ingredient or Equipment) produced by this Instruction, if any"
+                },
+                "temperature": {
+                    "$ref": "#/$defs/temperature",
+                    "description": "Temperature requirement for the Instruction"
+                }
+            },
+            "required": ["id", "action"],
+            "description": "A single step in the Recipe's preparation"
+        },
+        "intermediateEquipment": {
+            "allOf": [
+                { "$ref": "#/$defs/baseEquipment" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Additional descriptive information about the intermediate Equipment combination"
+                        },
+                        "producedByInstructionId": {
+                            "type": "integer",
+                            "description": "ID of the Instruction that produces this equipment combination"
+                        },
+                        "sourceEquipmentIds": {
+                            "type": "array",
+                            "items": { "type": "integer" },
+                            "minItems": 1,
+                            "description": "IDs of the Equipment used to produce this intermediate Equipment"
+                        },
+                        "sourceIngredientIds": {
+                            "type": "array",
+                            "items": { "type": "integer" },
+                            "description": "IDs of the Ingredients used to produce this intermediate Ingredient"
+                        }
+                    },
+                    "required": ["producedByInstructionId", "sourceEquipmentIds"]
+                }
+            ],
+            "description": "Equipment produced by an Instruction within the recipe (e.g. 'greased pan', 'lined baking sheets')"
+        },
+        "intermediateIngredient": {
+            "allOf": [
+                { "$ref": "#/$defs/baseIngredient" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Additional descriptive information about this intermediate Ingredient combination"
+                        },
+                        "producedByInstructionId": {
+                            "type": "integer",
+                            "description": "ID of the Instruction that produces this Ingredient combination"
+                        },
+                        "sourceIngredientIds": {
+                            "type": "array",
+                            "items": { "type": "integer" },
+                            "minItems": 1,
+                            "description": "IDs of the Ingredients used to produce this intermediate Ingredient"
+                        }
+                    },
+                    "required": ["producedByInstructionId", "sourceIngredientIds"]
+                }
+            ],
+            "description": "An Ingredient produced by an Instruction within the recipe (e.g. dry ingredients, dough)"
+        },
+        "item": {
+            "type": "object",
+            "properties": {
+                "dimensions": {
+                    "$ref": "#/$defs/dimensions",
+                    "description": "Size specification for the Item (e.g. '13x9 in.', '9 cm.')"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name of the Item (e.g. 'flour', 'eggs', 'pan', 'bowl')"
+                },
+                "preparation": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/symbolRef" },
+                    "description": "Canonical forms of the physical state of an Item, usually requires an additional Instruction to achieve (e.g. 'chopped', 'lined', 'peeled')"
+                },
+                "size": {
+                    "$ref": "#/$defs/symbolRef",
+                    "description": "Relative size of an Item (e.g. 'small', 'large')"
+                },
+                "state": {
+                    "type": "array",
+                    "items" : { "$ref": "#/$defs/symbolRef" },
+                    "description": "Canonical forms of the change in state of an Item (e.g. ['melted', 'boiling'], ['set'], ['blooming'])"
+                }
+            }
+        },
+        "lengthUnit": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a unit of measurement for length (e.g. 'in', 'cm')"
+        },
+        "massUnit": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a unit of measurement for mass (e.g. 'g', 'oz', 'lb')"
+        },
+        "measurement": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "$ref": "#/$defs/measurementUnit",
+                    "description": "Unit of measurement (e.g. 'cup (c)', 'tablespoon (tbsp/tb)', 'pinch')"
+                },
+                "value": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.001,
+                    "description": "Non-negative number with up to 3 decimal places (e.g. 0.333, 1, 2.5)"
+                },
+                "valueMin": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.001,
+                    "description": "Minimum value in a range (e.g. 5 in '5-6 eggs')"
+                },
+                "valueMax": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "multipleOf": 0.001,
+                    "description": "Maximum value in a range (e.g. 6 in '5-6 eggs')"
+                }
+            },
+            "oneOf": [
+                {
+                    "allOf": [
+                        { "required": ["value"] },
+                        { "not": { "required": ["valueMin", "valueMax"] } }
+                    ],
+                    "description": "Absolute measurement with exact value"
+                },
+                {
+                    "allOf": [
+                        { "required": ["unit", "valueMin", "valueMax"] },
+                        { "not": { "required": ["value"] } }
+                    ],
+                    "description": "Relative measurement with range"
+                },
+                {
+                    "allOf": [
+                        { "required": ["unit"] },
+                        { "not": { "anyOf": [
+                            { "required": ["value"] },
+                            { "required": ["valueMin"] },
+                            { "required": ["valueMax"] }
+                        ]}}
+                    ],
+                    "description": "Unit-only measurement"
+                }
+            ],
+            "additionalProperties": false,
+            "description": "Measurement requiring either a single value, a range of values, or just a unit"
+        },
+        "measurementUnit": {
+            "oneOf": [
+                { "$ref": "#/$defs/lengthUnit" },
+                { "$ref": "#/$defs/massUnit" },
+                { "$ref": "#/$defs/volumeUnit" }
+            ],
+            "description": "Unit of measurement (length, mass, or volume)"
+        },
+        "relSize": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a relative size specification (small 'sm', medium 'md', and large 'lg')"
+        },
+        "relTemp": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a relative temperature setting (e.g 'hot', 'cold', 'low', 'high')"
+        },
+        "symbolRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "Database ID for the canonical symbol."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Canonical name of the symbol."
+                },
+                "required": ["id", "name"],
+                "description": "Reference to a canonical symbol by its ID and name (e.g. )."
+            }
+        },
+        "temperature": {
+            "oneOf": [
+                { "$ref": "#/$defs/temperatureAbs" },
+                { "$ref": "#/$defs/temperatureRel" }
+            ],
+            "description": "An absolute or relative temperature value"
+        },
+        "temperatureAbs": {
+            "type": "object",
+            "properties": {
+                "unit": { "$ref": "#/$defs/tempUnit" },
+                "value": { "type": "number" }
+            },
+            "required": ["unit", "value"],
+            "description": "An exact temperature (e.g. 350 F)"
+        },
+        "temperatureRel": {
+            "type": "object",
+            "properties": {
+                "level": { "$ref": "#/$defs/relTemp" },
+                "unit": { "$ref": "#/$defs/tempUnit" },
+                "valueMin": { "type": "number" },
+                "valueMax": { "type": "number" }
+            },
+            "anyOf": [
+                { "required": ["unit", "valueMin", "valueMax"] },
+                {
+                    "required": ["level"],
+                    "not": {
+                        "anyOf": [
+                            { "required": ["unit"] },
+                            { "required": ["valueMin"] },
+                            { "required": ["valueMax"] }
+                        ]
+                    }
+                }
+            ],
+            "description": "A relative temperature (180-200 C, or HIGH heat)"
+        },
+        "tempUnit": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a unit of measurement for temperature (e.g. 'C', 'F')"
+        },
+        "timeUnit": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a unit of measurement for time (e.g. 'sec', 'min', 'hr')"
+        },
+        "volumeUnit": {
+            "$ref": "#/$defs/symbolRef",
+            "description": "Canonical form of a unit of measurement for volume (e.g. 'tsp', 'tbsp', 'c', 'qt')"
+        }
+    }
+}

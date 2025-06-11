@@ -1,0 +1,416 @@
+@startuml "Recipe Classes"
+
+' SYMBOL
+class Symbol <<dataclass>> {
+    + type: SymbolType
+    + categories: Set<string>
+    + canonicalForm: string
+    + aliases: Set<string>
+    + description: string
+}
+note right of Symbol
+  Represents a recognized term (unit, action, properties, identities, etc.) used as
+  a **Symbolic Descriptor**. Each Symbol has one 'type' (SymbolType)
+  and a set of one or more 'categories' (strings).
+  'categories' stores path-like strings (e.g. "MEAT_BEEF_CUT")
+  to represent hierarchies. Application logic parses hierarchical strings;
+  Instances are typically obtained from a central registry/lookup.
+end note
+
+enum SymbolType {
+    ACTION
+    EQUIPMENT_IDENTITY
+    INGREDIENT_IDENTITY
+    ITEM_PROPERTY
+    UNIT
+    ...
+}
+
+Symbol *-- "1" SymbolType
+
+Symbol ..> ActionCategory
+Symbol ..> ItemPropertyCategory
+Symbol ..> IngredientPreparationCategory
+Symbol ..> IngredientIdentityCategory
+Symbol ..> EquipmentIdentityCategory
+Symbol ..> UnitCategory
+
+' RECIPE
+class Recipe {
+    - id: integer
+    - title: string
+    - root_instructions: Set<Instruction>
+    - all_instructions: Set<Instruction>
+}
+note right of Recipe
+    == DAG Constraint:
+    The Instruction graph must be acyclic
+    no circular dependencies)
+end note
+
+Recipe *-- "0..*" Instruction : root_instructions
+Recipe o-- "0..*" Instruction : all_instructions  
+
+
+' RECIPE > INSTRUCTION
+enum ActionCategory {
+    COMBINATION
+    COOKING_METHOD
+    DIVISION         // reversible     e.g. half     (dough(100%) -> dough (50%), dough (50%))
+    PREPARATION_TASK 
+    SEPARATION       // non-reversible e.g. separate (egg -> yolks + whites)
+    TEMPERATURE_CHANGE
+    TEMPERATURE_CHANGE_DECREASE
+    TEMPERATURE_CHANGE_INCREASE
+    ...
+} 
+
+class Instruction {
+    - id: integer
+    - action: Symbol <<Action>>
+    - ingredients: Map<Ingredient, IngredientUsage> [0..*]
+    - equipment: Map<Equipment, EquipmentUsage> [0..*]
+    - produces: Item
+    - temperature: Temperature
+    - prerequisites: Instruction [0..*]
+    - next: Instruction [0..*]
+    - duration: Duration
+}
+note left of Instruction::action
+  Symbol.categories uses ActionCategory values.
+end note
+
+Instruction o-- "1" Symbol : action
+
+class IngredientUsage <<dataclass>> {
+    count: integer [0..1]
+    proportion: float [0..1]
+    measurement: Measurement
+}
+IngredientUsage o-- "0..1" Measurement : measurement
+
+class EquipmentUsage <<dataclass>> {
+    count: integer [0..1]
+}
+
+Instruction o-- Ingredient : ingredients_map_key
+Instruction o-- IngredientUsage : ingredients_map_value
+Instruction o-- Equipment : equipment_map_key
+Instruction o-- EquipmentUsage : equipment_map_value
+
+Instruction --> "0..1" Item : produces
+Instruction o-- "0..1" Temperature : temperature
+Instruction o-- "0..1" Duration : duration
+
+
+' ITEM
+enum ItemPropertyCategory {
+    PREPARATION_STYLE // general prep e.g. washed, heated, covered, ...
+    RELATIVE_SIZE
+    RELATIVE_TEMPERATURE
+    ...
+}
+
+abstract class Item {
+    - name: string
+    - identity: Symbol <<Identity> [1..*]
+    - state: Symbol <<Property>> [0..*]
+    - preparation: Symbol <<Property>> [0..*]
+    - size: Symbol <<Property>>
+    - dimensions: Dimensions
+}
+note left of Item::identity
+  Symbol.type = INGREDIENT_IDENTITY or EQUIPMENT_IDENTITY.
+  Symbol.categories from IngredientIdentityCategory or EquipmentIdentityCategory.
+end note
+note left of Item::state
+  Symbol.categories from ItemPropertyCategory.
+end note
+note left of Item::preparation
+  Symbol.categories from ItemPropertyCategory (e.g. PREPARATION_STYLE).
+end note
+note left of Item::size
+  Symbol.categories from ItemPropertyCategory (e.g. RELATIVE_SIZE).
+end note
+
+Item <|-- Ingredient
+Item <|-- Equipment
+
+Item o-- "1..*" Symbol : identity
+Item o-- "0..1" Symbol : size
+Item o-- "0..1" Dimensions : dimensions
+
+
+' ITEM > INGREDIENT
+enum IngredientPreparationCategory {
+    CUT_STYLE   // e.g. diced, minced, sliced, julienned, ...
+    COLOR
+    TEXTURE     // e.g. shiny, crumbly, smooth, ...
+    CONSISTENCY // e.g. (soft, medium, stiff) peaks
+    ...
+}
+
+enum IngredientIdentityCategory {
+    FRUIT
+    FRUIT_BERRY
+    VEGETABLE
+    VEGETABLE_LEAF
+    VEGETABLE_ROOT
+    HERB
+    SPICE
+    NUT
+    MEAT
+    MEAT_BEEF
+    MEAT_BEEF_CUT
+    GRAIN
+    GRAIN_CEREAL_RICE
+    GRAIN_CEREAL_WHEAT
+    DAIRY
+    DAIRY_CHEESE
+    DAIRY_MILK
+    DAIRY_MILK_FAT_REDUCED
+    DAIRY_MILK_FAT_LOW
+    ...
+}
+
+class Ingredient {
+    - id: integer
+    - parent_id: integer [0..1]
+    - cut_style: Symbol <<Property>>
+    - measurement: Measurement
+    - is_category: boolean
+    - is_optional: boolean
+}
+
+Ingredient "0..1" <-- "0..*" Ingredient : parent_of
+
+' ITEM > INGREDIENT > INTERMEDIATE
+Item <|-- IntermediateIngredient
+class IntermediateIngredient {
+    - produced_by: Instruction
+    - source_ingredients: Set<Ingredient>
+    - description: string
+}
+note right of IntermediateIngredient
+== Consistency Constraint:
+    The produced_by instruction must list at least
+    one sourceIngredient in its ingredients
+end note
+
+IntermediateIngredient o-- "1" Instruction : produced_by
+IntermediateIngredient o-- "1..*" Ingredient : source_ingredients
+
+
+' ITEM > EQUIPMENT
+enum EquipmentIdentityCategory {
+    VESSEL_COOKWARE // e.g. frying pan, saucepan, griddle, ...
+    VESSEL_BAKEWARE // e.g. sheet pan, cake tin, ...
+    TOOL_CUTTING    // e.g. knife, peeler, ...
+    TOOL_MIXING     // e.g. whisk, spoon, ...
+    TOOL_MEASURING
+    TOOL_MEASURING_WEIGHT
+    TOOL_MEASURING_VOLUME
+    TOOL_MEASURING_VOLUME_DRY    // e.g. measuring scoop
+    TOOL_MEASURING_VOLUME_LIQUID // e.g. measuring cup
+    APPLIANCE_SMALL
+    APPLIANCE_LARGE
+    MATERIAL // e.g. steel, wooden, copper, silicone, ... 
+}
+
+class Equipment {
+    - id: integer
+}
+
+' ITEM > EQUIPMENT > INTERMEDIATE
+Item <|-- IntermediateEquipment
+class IntermediateEquipment {
+    - produced_by: Instruction
+    - source_equipment: Set<Equipment>
+    - source_ingredients: Set<Ingredient>
+    - description: string
+}
+note right of IntermediateEquipment
+    == Consistency Constraint:
+    The produced_by instruction must list at least
+    one sourceEquipment in its equipment
+end note
+
+IntermediateEquipment o-- "1" Instruction : produced_by
+IntermediateEquipment o-- "1..*" Equipment : source_equipment
+IntermediateEquipment o-- "0..*" Ingredient : source_ingredients
+
+
+' MEASUREMENT
+enum UnitCategory {
+    LENGTH
+    MASS
+    TEMPERATURE
+    TEMPERATURE_RELATIVE
+    TEMPERATURE_ABSOLUTE
+    TIME
+    TIME_RELATIVE
+    TIME_ABSOLUTE
+    VOLUME
+    ...
+}
+
+abstract class Measurement {}
+note right of Measurement
+    == Measurement Constraints:
+    One of the following must be true:
+        1. value and unit exist (MeasurementAbs)
+        2. only value exists (MeasurementAbs)
+        3. value_min, value_max, and unit exist (MeasurementRel)
+        4. only unit exists (MeasurementRel)
+end note
+
+Measurement <|-- MeasurementAbs : {disjoint, complete}
+Measurement <|-- MeasurementRel : {disjoint, complete}
+
+
+' MEASUREMENT > ABSOLUTE
+class MeasurementAbs <<dataclass>> {
+    - value: float [0..1]
+    - unit: Symbol <<Unit>>
+}
+note right of MeasurementAbs::unit
+  Symbol.categories from UnitCategory.
+end note
+
+MeasurementAbs o-- "0..1" Symbol : unit
+
+
+' MEASUREMENT > RELATIVE
+class MeasurementRel <<dataclass>> {
+    - value_min: float [0..1]
+    - value_max: float [0..1]
+    - unit: Symbol <<Unit>>
+}
+note left of MeasurementRel::unit
+  Symbol.categories from UnitCategory.
+end note
+
+MeasurementRel o-- "0..1" Symbol : unit
+
+
+' TEMPERATURE
+abstract class Temperature {}
+note right of Temperature
+    == Temperature Constraints:
+    One of the following must be true:
+        1. value and unit exist (TemperatureAbs)
+        2. value_min, value_max, and unit exist (TemperatureRel)
+        3. only level exists (TemperatureRel)
+end note
+
+Temperature <|-- TemperatureAbs : {disjoint, complete}
+Temperature <|-- TemperatureRel : {disjoint, complete}
+
+
+' TEMPERATURE > ABSOLUTE
+class TemperatureAbs <<dataclass>> {
+    - value: float
+    - unit: Symbol <<Unit>>
+}
+note left of TemperatureAbs::unit
+  Symbol.categories from UnitCategory (TEMPERATURE).
+end note
+TemperatureAbs o-- "1" Symbol : unit
+
+
+' TEMPERATURE > RELATIVE
+class TemperatureRel <<dataclass>> {
+    - value_min: float [0..1]
+    - value_max: float [0..1]
+    - unit: Symbol <<Unit>>
+    - level: Symbol <<Property>>
+}
+note right of TemperatureRel::unit
+  Symbol.categories from UnitCategory (TEMPERATURE).
+end note
+note right of TemperatureRel::level
+  Symbol.categories from ItemPropertyCategory (TEMPERATURE_RELATIVE).
+end note
+
+TemperatureRel o-- "0..1" Symbol : unit
+TemperatureRel o-- "0..1" Symbol : level
+
+
+' DURATION
+abstract class Duration {}
+note right of Duration
+    == Duration Constraints:
+    One of the following must be true:
+        1. value and unit exist (DurationAbs)
+        2. value_min, value_max, and unit exist (DurationRel)
+end note
+
+Duration <|-- DurationAbs : {disjoint, complete}
+Duration <|-- DurationRel : {disjoint, complete}
+
+
+' DURATION > ABSOLUTE
+class DurationAbs <<dataclass>> {
+    - value: float
+    - unit: Symbol <<Unit>>
+}
+note left of DurationAbs::unit
+  Symbol.categories from UnitCategory (TIME).
+end note
+
+DurationAbs o-- "1" Symbol : unit
+
+
+' DURATION > RELATIVE
+class DurationRel <<dataclass>> {
+    - value_min: float
+    - value_max: float
+    - unit: Symbol <<Unit>>
+}
+note right of DurationRel::unit
+  Symbol.categories from UnitCategory (TIME).
+end note
+
+DurationRel o-- "1" Symbol : unit
+
+
+' DIMENSIONS
+abstract class Dimensions {}
+note left of Dimensions
+    == Dimensions Constraints:
+    One of the following must be true:
+        1. values and unit exist (DimensionsAbs)
+	        - Represents exact dimensions (e.g. "9 in." or "13x9 in.")
+        2. values_min, values_max, and unit exist (DimensionsRel)
+	        - Represents dimension ranges (e.g. "8-9 in." or "10-12 x 8-9 in.")
+end note
+
+Dimensions <|-- DimensionsAbs : {disjoint, complete}
+Dimensions <|-- DimensionsRel : {disjoint, complete}
+
+
+' DIMENSIONS > ABSOLUTE
+class DimensionsAbs <<dataclass>> {
+    - values: float [1..3]
+    - unit: Symbol <<Unit>>
+}
+note right of DimensionsAbs::unit
+  Symbol.categories from UnitCategory (LENGTH).
+end note
+
+DimensionsAbs o-- "1" Symbol : unit
+
+
+' DIMENSIONS > RELATIVE
+class DimensionsRel <<dataclass>> {
+    - values_min: float[1..3]
+    - values_max: float[1..3]
+    - unit: Symbol <<Unit>>
+}
+note left of DimensionsRel::unit
+  Symbol.categories from UnitCategory (specifically LENGTH).
+end note
+
+DimensionsRel o-- "1" Symbol : unit
+
+@enduml

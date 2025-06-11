@@ -1,0 +1,17 @@
+# Project directories
+.git/
+.vscode/
+docs/
+tests/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Project configuration files
+.dockerignore
+.env*
+!.env.example
+.gitignore
+README.md

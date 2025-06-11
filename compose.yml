@@ -1,0 +1,89 @@
+services:
+  # MariaDB - SQL Relational Database
+  mariadb:
+    image: mariadb:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-thesis}_mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./dataset/mariadb:/docker-entrypoint-initdb.d:ro # Mount SQL scripts
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    networks:
+      - app-network
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+
+  # MongoDB - JSON Object Database
+  mongodb:
+    image: mongo:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-thesis}_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-thesis_dev}
+    volumes:
+      - mongo_data:/data/db
+      - ./dataset/mongodb:/docker-entrypoint-initdb.d:ro # Docker entrypoint
+      - ./dataset/structured:/init-data/structured:ro # Mount JSON files
+    ports:
+      - "${MONGODB_PORT:-27017}:27017"
+    networks:
+      - app-network
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+
+  # PHPMyAdmin - MariaDB Web Interface
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-thesis}_phpmyadmin
+    profiles:
+      - dev
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    networks:
+      - app-network
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+
+  # MongoExpress - MongoDB Web Interface
+  mongo-express:
+    image: mongo-express:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-thesis}_mongo_express
+    profiles:
+      - dev
+    depends_on:
+      - mongodb
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: 'true'
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_BASICAUTH_USERNAME: ""
+      ME_CONFIG_BASICAUTH_PASSWORD: ""
+    ports:
+      - "${ME_PORT:-8081}:8081"
+    networks:
+      - app-network
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+
+volumes:
+  mongo_data:
+    name: ${COMPOSE_PROJECT_NAME:-thesis}_mongo_data
+    driver: local
+  mariadb_data:
+    name: ${COMPOSE_PROJECT_NAME:-thesis}_mariadb_data
+    driver: local
+
+networks:
+  app-network:
+    name: ${COMPOSE_PROJECT_NAME:-thesis}_network
+    driver: bridge

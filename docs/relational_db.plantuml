@@ -1,0 +1,303 @@
+@startuml "Relational Database Schema"
+
+/' ACTIONS - CANONICAL
+Defines master list of action terms
+'/
+entity "actions_canonical" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+  description : TEXT
+}
+
+/' ACTIONS - RECOGNIZED
+Maps aliases to their canonical actions '/
+entity "actions_recognized" {
+  *action_canonical_id : INT <<FK>>
+  *alias : VARCHAR(255)
+  --
+  <<PK>> (action_canonical_id, alias)
+}
+
+actions_canonical ||--o{ actions_recognized : has_alias
+
+/' ACTIONS - CATEGORY DEFINITIONS (ActionCategory)
+Defines category values for actions '/
+entity "action_categories" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+}
+note right of action_categories: Name can be hierarchical/path-like, populated from ActionCategory enum.
+
+/' ACTIONS -> CATEGORIES
+Maps canonical actions to their categories'/
+entity "action_category_mapping" {
+  *action_canonical_id : INT <<FK>>
+  *action_category_id : INT <<FK>>
+  --
+  <<PK>> (action_canonical_id, action_category_id)
+}
+
+actions_canonical ||--o{ action_category_mapping : is_categorized_as
+action_categories ||--o{ action_category_mapping : categorizes
+
+
+/' INGREDIENTS - CANONICAL
+Defines master list of ingredient terms '/
+entity "ingredients_canonical" {
+  *id : INT <<PK>> <<autoincrement>>
+  parent_ingredient_id : INT <<FK>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+  is_category : BOOLEAN DEFAULT FALSE
+  description : TEXT
+}
+
+ingredients_canonical }o--o| ingredients_canonical : parent_of
+
+/' INGREDIENTS - RECOGNIZED
+Maps aliases to their canonical ingredient '/
+entity "ingredients_recognized" {
+  *ingredient_canonical_id : INT <<FK>>
+  *alias : VARCHAR(255)
+  --
+  <<PK>> (ingredient_canonical_id, alias)
+}
+
+ingredients_canonical ||--o{ ingredients_recognized : has_alias
+
+/' INGREDIENTS - CATEGORY DEFINITIONS (IngredientIdentityCategory)
+Defines category values for ingredients '/
+entity "ingredient_identity_categories" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+}
+note right of ingredient_identity_categories: Name can be hierarchical/path-like, populated from IngredientIdentityCategory enum.
+
+/' INGREDIENTS -> CATEGORIES (IngredientIdentityCategory)
+Maps canonical ingredient terms to their identity categories '/
+entity "ingredient_identity_category_mapping" {
+  *ingredient_canonical_id : INT <<FK>>
+  *identity_category_id : INT <<FK>>
+  --
+  <<PK>> (ingredient_canonical_id, identity_category_id)
+}
+
+ingredients_canonical ||--o{ ingredient_identity_category_mapping : has_identity
+ingredient_identity_categories ||--o{ ingredient_identity_category_mapping : provides_identity
+
+
+/' EQUIPMENT - CANONICAL
+Defines master list of equipment terms '/
+entity "equipment_canonical" {
+  *id : INT <<PK>> <<autoincrement>>
+  parent_equipment_id : INT <<FK>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+  is_category : BOOLEAN DEFAULT FALSE
+  description: TEXT
+}
+
+equipment_canonical }o--o| equipment_canonical : parent_of
+
+/' EQUIPMENT > RECOGNIZED
+Maps alises to their canonical equipment '/
+entity "equipment_recognized" {
+  *equipment_canonical_id : INT <<FK>>
+  *alias : VARCHAR(255)
+  --
+  <<PK>> (equipment_canonical_id, alias)
+}
+
+equipment_canonical ||--o{ equipment_recognized : has_alias
+
+/' EQUIPMENT - CATEGORY DEFINITIONS (EquipmentIdentityCategory)
+Defines identity categories for equipment '/
+entity "equipment_identity_categories" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name  : VARCHAR(255) <<UNIQUE>>
+}
+note right of equipment_identity_categories: Name can be hierarchical/path-like, populated from EquipmentIdentityCategory enum.
+
+/' EQUIPMENT -> CATEGORIES
+Maps canonical equipment to their identity categories '/
+entity "equipment_identity_category_mapping" {
+  *equipment_canonical_id : INT <<FK>>
+  *identity_category_id : INT <<FK>>
+  --
+  <<PK>> (equipment_canonical_id, identity_category_id)
+}
+
+equipment_canonical ||--o{ equipment_identity_category_mapping : has_identity
+equipment_identity_categories ||--o{ equipment_identity_category_mapping : provides_identity
+
+
+/' UNITS - CANONICAL
+Defines master list of unit terms '/
+entity "units_canonical" {
+  *id : INT <<PK>> <<autoincrement>> 
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+  description : TEXT
+}
+
+/' UNITS - RECOGNIZED
+Maps aliases to their canonical units '/
+entity "units_recognized" {
+  *unit_canonical_id : INT <<FK>>
+  *alias : VARCHAR(255)
+  --
+  <<PK>> (unit_canonical_id, alias)
+}
+
+units_canonical ||--o{ units_recognized : has_alias
+
+/' UNITS - CATEGORY DEFINITIONS (UnitCategory)
+Defines valid category values for units '/
+entity "unit_categories" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+}
+note right of unit_categories: Name can be hierarchical/path-like, populated from UnitCategory enum.
+
+/' UNITS -> CATEGORIES
+Maps canonical units to their unit categories '/
+entity "unit_category_mapping" {
+  *unit_canonical_id : INT <<FK>>
+  *unit_category_id : INT <<FK>>
+  --
+  <<PK>> (unit_canonical_id, unit_category_id)
+}
+
+units_canonical ||--o{ unit_category_mapping : is_categorized_as
+unit_categories ||--o{ unit_category_mapping : categorizes
+
+/' ITEM_PROPERTIES - CATEGORIES DEFINITIONS (ItemPropertyCategory)
+Defines 'types' of properties e.g. 'PREPARATION_STYLE', 'RELATIVE_SIZE' '/
+entity "item_property_categories" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+}
+note right of item_property_categories: Name can be hierarchical/path-like, populated from ItemPropertyCategory & IngredientPreparationCategory enums.
+
+/' ITEM_PROPERTIES - CANONICAL
+Defines master list of actual property values  e.g. 'large', 'red' '/
+entity "item_properties_canonical" {
+  *id : INT <<PK>> <<autoincrement>>
+  parent_property_id : INT <<FK>>
+  --
+  *name : VARCHAR(255) <<UNIQUE>>
+  description : TEXT
+}
+
+item_properties_canonical }o--o| item_properties_canonical : parent_of
+
+/' ITEM_PROPERTIES - RECOGNIZED
+Maps aliases to canonical properties '/
+entity "item_properties_recognized" {
+  *item_property_canonical_id : INT <<FK>>
+  *alias : VARCHAR(255)
+  --
+  <<PK>> (item_property_canonical_id, alias)
+}
+
+item_properties_canonical ||--o{ item_properties_recognized : has_alias
+
+' ITEM_PROPERTIES -> CATEGORIES
+entity "item_property_category_mapping" {
+  *item_property_canonical_id : INT <<FK>>
+  *item_property_category_id : INT <<FK>>
+  --
+  <<PK>> (item_property_canonical_id, item_property_category_id)
+}
+
+item_properties_canonical ||--o{ item_property_category_mapping : is_categorized_as
+item_property_categories ||--o{ item_property_category_mapping : categorizes
+
+
+/' RECIPE
+Master list of recipes '/
+entity "recipes" {
+  *id : INT <<PK>> <<autoincrement>>
+  --
+  *object_id : VARCHAR(24) <<UNIQUE>>
+  *name : VARCHAR(255)
+}
+note right of recipes
+  The "object_id" field stores the MongoDB ObjectId 
+  reference for the full recipe document
+end note
+
+/' INSTRUCTIONS
+Defines individual steps within recipes, mapping to an action '/
+entity "instructions" {
+  *id : INT <<PK>> <<autoincrement>>
+  *recipe_id : INT <<FK>>
+  *action_canonical_id : INT <<FK>>
+  --
+  sequence_order : FLOAT
+  description : TEXT
+}
+
+recipes ||--o{ instructions : has_step
+actions_canonical ||--o{ instructions : performed_as
+
+/' INSTRUCTION <-> INGREDIENTS USAGE
+Details how an ingredient is used in a specific instruction. '/
+entity "instruction_ingredient_usage" {
+  *id : INT <<PK>> <<autoincrement>>
+  *instruction_id : INT <<FK>>
+  *ingredient_canonical_id : INT <<FK>>
+  quantity_unit_canonical_id : INT <<FK>>
+  --
+  quantity_value : FLOAT
+  proportion_value : FLOAT
+  is_optional : BOOLEAN DEFAULT FALSE
+  notes : TEXT
+}
+
+instructions ||--o{ instruction_ingredient_usage : uses_ingredient
+ingredients_canonical ||--o{ instruction_ingredient_usage : used_in_instruction
+units_canonical ||--o{ instruction_ingredient_usage : has_unit_for_quantity
+
+/' INSTRUCTION_INGREDIENT_USAGE -> ITEM_PROPERTIES
+Maps an ingredient's usage in an instruction to its specific item properties (e.g., cut_style="diced"). '/
+entity "instruction_ingredient_properties_mapping" {
+  *instruction_ingredient_usage_id : INT <<FK>>
+  *item_property_canonical_id : INT <<FK>> ' FK to item_properties_canonical.id (e.g., id for "diced")
+  --
+  <<PK>> (instruction_ingredient_usage_id, item_property_canonical_id)
+}
+instruction_ingredient_usage ||--o{ instruction_ingredient_properties_mapping : has_property
+item_properties_canonical ||--o{ instruction_ingredient_properties_mapping : applied_as_ingredient_property
+
+/' INSTRUCTION <-> EQUIPMENT USAGE
+Details how equipment is used in a specific instruction. '/
+entity "instruction_equipment_usage" {
+  *id : INT <<PK>> <<autoincrement>>
+  *instruction_id : INT <<FK>>
+  *equipment_canonical_id : INT <<FK>>
+  --
+  count : INT ' Optional: Number of this equipment used
+  notes : TEXT ' e.g., "large", "preheated"
+}
+instructions ||--o{ instruction_equipment_usage : uses_equipment
+equipment_canonical ||--o{ instruction_equipment_usage : used_in_instruction
+
+/' INSTRUCTION_EQUIPMENT_USAGE -> ITEM_PROPERTIES
+Maps equipment usage in an instruction to its specific item properties (e.g., material="cast iron", state="preheated"). '/
+entity "instruction_equipment_properties_mapping" {
+  *instruction_equipment_usage_id : INT <<FK>>
+  *item_property_canonical_id : INT <<FK>> ' FK to item_properties_canonical.id
+  --
+  <<PK>> (instruction_equipment_usage_id, item_property_canonical_id)
+}
+instruction_equipment_usage ||--o{ instruction_equipment_properties_mapping : has_property
+item_properties_canonical ||--o{ instruction_equipment_properties_mapping : applied_as_equipment_property
+
+@enduml
