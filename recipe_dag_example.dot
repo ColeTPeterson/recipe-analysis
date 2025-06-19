@@ -1,0 +1,114 @@
+digraph RecipeDAG {
+    rankdir=TB;
+    node [fontname="Arial", fontsize=10];
+    edge [fontsize=8];
+
+    // Subgraphs for organization
+    subgraph cluster_ingredients {
+        label="Base Ingredients";
+        style=dashed;
+        color=green;
+        "fresh_tomatoes" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "garlic_cloves" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "fresh_basil" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "olive_oil" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "water" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "dry_pasta" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "salt" [shape=ellipse, fillcolor=lightgreen, style=filled];
+        "whole_onion" [shape=ellipse, fillcolor=lightgreen, style=filled];
+    }
+
+    subgraph cluster_equipment {
+        label="Equipment";
+        style=dashed;
+        color=blue;
+        "chef_knife" [shape=diamond, fillcolor=lightblue, style=filled];
+        "colander" [shape=diamond, fillcolor=lightblue, style=filled];
+        "large_pot" [shape=diamond, fillcolor=lightblue, style=filled];
+        "frying_pan" [shape=diamond, fillcolor=lightblue, style=filled];
+    }
+
+    // Intermediate and final products
+    "chopped_garlic" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "cooked_pasta" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "chopped_tomatoes" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "marinara_sauce" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "seasoned_marinara" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "chopped_onion" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "pasta_with_marinara" [shape=ellipse, fillcolor=lightcoral, style=filled];
+    "sauteed_aromatics" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "pasta_water" [shape=ellipse, fillcolor=lightcoral, style=filled];
+    "sauce_base" [shape=ellipse, fillcolor=lightyellow, style=filled];
+    "drained_pasta" [shape=ellipse, fillcolor=lightyellow, style=filled];
+
+    // Action nodes
+    "chop_2" [label="chop_2", shape=box, fillcolor=lavender, style=filled];
+    "boil" [label="boil", shape=box, fillcolor=lightsalmon, style=filled];
+    "season" [label="season", shape=box, fillcolor=lavender, style=filled];
+    "chop_3" [label="chop_3", shape=box, fillcolor=lavender, style=filled];
+    "simmer" [label="simmer", shape=box, fillcolor=lightsalmon, style=filled];
+    "toss" [label="toss", shape=box, fillcolor=lightcyan, style=filled];
+    "combine" [label="combine", shape=box, fillcolor=lightcyan, style=filled];
+    "saute" [label="saute", shape=box, fillcolor=lightsalmon, style=filled];
+    "chop_1" [label="chop_1", shape=box, fillcolor=lavender, style=filled];
+    "strain" [label="strain", shape=box, fillcolor=lightgray, style=filled];
+
+    // Edges
+    "chef_knife" -> "chop_2";
+    "garlic_cloves" -> "chop_2";
+    "chop_2" -> "chopped_garlic";
+    "water" -> "boil";
+    "large_pot" -> "boil";
+    "dry_pasta" -> "boil";
+    "salt" -> "boil";
+    "boil" -> "cooked_pasta";
+    "fresh_basil" -> "season";
+    "marinara_sauce" -> "season";
+    "season" -> "seasoned_marinara";
+    "fresh_tomatoes" -> "chop_3";
+    "chef_knife" -> "chop_3";
+    "chop_3" -> "chopped_tomatoes";
+    "sauce_base" -> "simmer";
+    "simmer" -> "marinara_sauce";
+    "drained_pasta" -> "toss";
+    "seasoned_marinara" -> "toss";
+    "toss" -> "pasta_with_marinara";
+    "sauteed_aromatics" -> "combine";
+    "chopped_tomatoes" -> "combine";
+    "combine" -> "sauce_base";
+    "chopped_garlic" -> "saute";
+    "olive_oil" -> "saute";
+    "frying_pan" -> "saute";
+    "chopped_onion" -> "saute";
+    "saute" -> "sauteed_aromatics";
+    "whole_onion" -> "chop_1";
+    "chef_knife" -> "chop_1";
+    "chop_1" -> "chopped_onion";
+    "cooked_pasta" -> "strain";
+    "colander" -> "strain";
+    "strain" -> "drained_pasta";
+    "strain" -> "pasta_water";
+
+    subgraph cluster_legend {
+        label="Legend";
+        style=filled;
+        fillcolor=white;
+        color=black;
+        fontsize=12;
+        fontname="Arial Bold";
+        
+        legend_input [label="Base Ingredient\n(Recipe Input)", shape=ellipse, fillcolor=lightgreen, style=filled, fontsize=10];
+        legend_intermediate [label="Intermediate Product\n(Transformed Item)", shape=ellipse, fillcolor=lightyellow, style=filled, fontsize=10];
+        legend_output [label="Final Product\n(Recipe Output)", shape=ellipse, fillcolor=lightcoral, style=filled, fontsize=10];
+        legend_equipment [label="Equipment\n(Reusable Tool)", shape=diamond, fillcolor=lightblue, style=filled, fontsize=10];
+        
+        legend_prep [label="Preparation Task\n(chop, season)", shape=box, fillcolor=lavender, style=filled, fontsize=10];
+        legend_cook [label="Cooking Method\n(boil, saute, simmer)", shape=box, fillcolor=lightsalmon, style=filled, fontsize=10];
+        legend_combine [label="Combination\n(combine, mix)", shape=box, fillcolor=lightcyan, style=filled, fontsize=10];
+        legend_separate [label="Separation\n(strain)", shape=box, fillcolor=lightgray, style=filled, fontsize=10];
+        
+        legend_input -> legend_intermediate -> legend_output -> legend_equipment [style=invis];
+        legend_prep -> legend_cook -> legend_combine -> legend_separate [style=invis];
+        
+    }
+}

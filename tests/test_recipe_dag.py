@@ -260,7 +260,7 @@ def analyze_dag(recipe, symbols, items):
     print(f"Sauce transformation: {' → '.join(sauce_chain)}")
     print(f"Aromatics transformation: {' → '.join(aromatics_chain)}")
 
-def generate_dot_file(recipe, output_file="docs/Recipe DAG Example.dot"):
+def generate_dot_file(recipe, output_file="recipe_dag_example.dot"):
     """Generate DOT visualization for a recipe."""
     print(f"\n=== Generating Visualization ===")
     
