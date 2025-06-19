@@ -13,6 +13,7 @@ dataset/*
 # Included documentation
 docs/*
 !docs/recipe_classes.plantuml
+!docs/Recipe\ Basic\ DAG\ Example.png
 !docs/Recipe\ Classes.png
 !docs/relational_db.plantuml
 !docs/Relational\ Database\ Schema.png
