@@ -7,6 +7,7 @@ This file tests all of the basic components of a recipe DAG
 
 import sys
 import os
+import subprocess
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from models.recipe import Recipe
@@ -260,7 +261,7 @@ def analyze_dag(recipe, symbols, items):
     print(f"Sauce transformation: {' → '.join(sauce_chain)}")
     print(f"Aromatics transformation: {' → '.join(aromatics_chain)}")
 
-def generate_dot_file(recipe, output_file="recipe_dag_example.dot"):
+def generate_dot_file(recipe, output_png="docs/Recipe DAG Example.png", output_svg="docs/Recipe DAG Example.svg"):
     """Generate DOT visualization for a recipe."""
     print(f"\n=== Generating Visualization ===")
     
@@ -377,14 +378,29 @@ def generate_dot_file(recipe, output_file="recipe_dag_example.dot"):
         "}"
     ])
     
-    # Write file
-    with open(output_file, 'w') as f:
-        f.write('\n'.join(dot_content))
+    dot_string = '\n'.join(dot_content)
+        
+    # Generate PNG 
+    try:
+        result = subprocess.run(['dot', '-Tpng', '-o', output_png], 
+                              input=dot_string, text=True, capture_output=True)
+        if result.returncode == 0:
+            print(f"PNG generated: {output_png}")
+        else:
+            print(f"Error generating PNG: {result.stderr}")
+    except FileNotFoundError:
+        print("Error: 'dot' command not found. Please install Graphviz.")
     
-    print(f"DOT file generated: {output_file}")
-    print("Visualization commands:")
-    print(f"  dot -Tpng {output_file} -o Recipe\ DAG\ Example.png")
-    print(f"  dot -Tsvg {output_file} -o Recipe\ DAG\ Example.svg")
+    # Generate SVG
+    try:
+        result = subprocess.run(['dot', '-Tsvg', '-o', output_svg], 
+                              input=dot_string, text=True, capture_output=True)
+        if result.returncode == 0:
+            print(f"SVG generated: {output_svg}")
+        else:
+            print(f"Error generating SVG: {result.stderr}")
+    except FileNotFoundError:
+        print("Error: 'dot' command not found. Please install Graphviz.")
 
 def main():
     """Main demonstration of a recipe DAG."""
