@@ -1,8 +1,8 @@
 # Project environment
-.vscode/*
-.env
-.env.*
+.vscode/
+.env*
 !.env.example
+builders/
 
 # Dataset
 dataset/*
@@ -12,11 +12,7 @@ dataset/*
 
 # Included documentation
 docs/*
-!docs/recipe_classes.plantuml
-!docs/Recipe\ Basic\ DAG\ Example.png
 !docs/Recipe\ Classes.png
-!docs/Recipe\ DAG\ Example.png
-!docs/relational_db.plantuml
 !docs/Relational\ Database\ Schema.png
 
 # Python artifacts
