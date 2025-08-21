@@ -1,3 +1,8 @@
+"""Defines classes for representing recipe instructions and how ingredients
+and equipment are used within those instructions; models the relationships between
+actions, ingredients, equipment, and produced items.
+"""
+
 from typing import Optional, Dict, Set
 from .duration import Duration
 from .item import Equipment, Ingredient, Item

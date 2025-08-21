@@ -1,3 +1,7 @@
+"""Defines classes for representing durations in recipes,
+supporting both absolute durations and relative (range-based) durations.
+"""
+
 from abc import ABC
 from .symbol import Symbol
 

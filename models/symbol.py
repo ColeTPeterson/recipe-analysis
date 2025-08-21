@@ -1,3 +1,8 @@
+"""Defines the foundational Symbol class for representing recipe components;
+provides both the symbolic representation of recipe elements (actions, ingredients, etc.)
+and handles the directed acyclic graph (DAG) operator structure for action nodes.
+"""
+
 from enum import Enum
 from typing import Set
 

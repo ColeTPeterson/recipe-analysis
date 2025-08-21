@@ -1,3 +1,8 @@
+"""Defines the Recipe class that represents a complete recipe as a
+directed acyclic graph (DAG) of actions and items. Provides methods to build,
+validate, and analyze recipe structures.
+"""
+
 from typing import Set, TYPE_CHECKING
 from .instruction import Instruction
 

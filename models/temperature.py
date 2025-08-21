@@ -1,3 +1,7 @@
+"""Defines classes for representing temperatures in recipes;
+provides both absolute and relative temperature specifications with appropriate units.
+"""
+
 from abc import ABC
 from typing import Optional
 from .symbol import Symbol

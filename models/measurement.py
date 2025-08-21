@@ -1,3 +1,7 @@
+"""Defines classes for representing measurements in recipes,
+supporting both absolute measurements and relative (range-based) measurements.
+"""
+
 from abc import ABC
 from typing import Optional
 from .symbol import Symbol

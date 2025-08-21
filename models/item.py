@@ -1,3 +1,7 @@
+"""Defines classes for recipe items (ingredients and equipment);
+models the properties of items and their relationships with recipe actions.
+"""
+
 from abc import ABC
 from typing import Set, Optional, TYPE_CHECKING
 from .symbol import Symbol

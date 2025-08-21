@@ -1,3 +1,7 @@
+"""Defines classes for representing physical dimensions in recipes,
+supporting both absolute and relative dimensions with appropriate units.
+"""
+
 from abc import ABC
 from typing import List
 from .symbol import Symbol

@@ -1,3 +1,8 @@
+"""
+Contains all the core domain models used for representing recipes,
+ingredients, equipment, actions, and their relationships.
+"""
+
 from .symbol import SymbolType, Symbol
 from .instruction import IngredientUsage, EquipmentUsage, Instruction
 from .recipe import Recipe
