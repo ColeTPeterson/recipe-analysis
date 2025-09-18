@@ -1,172 +1,166 @@
-"""Defines the foundational Symbol class for representing recipe components;
-provides both the symbolic representation of recipe elements (actions, ingredients, etc.)
-and handles the directed acyclic graph (DAG) operator structure for action nodes.
+"""Represents a recognized term (action, equipment, ingredient, etc.) used
+as symbolic descriptors in recipes. Each symbol has a 'type' and references
+to hierarchical identities and properties stored separately.
 """
 
 from enum import Enum
-from typing import Set
+from typing import Optional, Tuple, Set, Dict, Any
+
 
 class SymbolType(Enum):
-    """Enumeration of symbol types used to classify symbolic descriptors."""
-    ACTION = "ACTION"
-    EQUIPMENT_IDENTITY = "EQUIPMENT_IDENTITY"
-    INGREDIENT_IDENTITY = "INGREDIENT_IDENTITY"
-    ITEM_PROPERTY = "ITEM_PROPERTY"
-    UNIT = "UNIT"
+    """Represents different kinds of symbols used in recipe analysis."""
+    ACTION = "action"
+    EQUIPMENT = "equipment"
+    INGREDIENT = "ingredient"
+    UNIT = "unit"
 
 
 class Symbol:
-    """Represents a recognized term (unit, action, properties, identities, etc.)
-    used as a symbolic descriptor in recipes.
-
-    Attributes:
-        symbol_type (SymbolType): The type of the symbol (e.g. ACTION, UNIT).
-        categories (Set[str]): A set of hierarchical categories the symbol belongs to.
-        canonical_form (str): The canonical name of a symbol.
-        aliases (Set[str]): Alternative names or aliases for the symbol.
-        description (str): A textual description of the symbol.
+    """Represents a symbol in recipe analysis;
+    they are units that make up the recipe itself.
     """
-    def __init__(self,
-                 symbol_type: SymbolType,
-                 categories: Set[str],
-                 canonical_form: str,
-                 aliases: Set[str],
-                 description: str):
-        self.symbol_type = symbol_type
-        self.categories = categories
+    
+    def __init__(
+        self,
+        type: SymbolType,
+        name: str,
+        entity_id: Optional[int] = None,
+        canonical_form: Optional[Tuple[int, str]] = None,
+        identities: Optional[Set[str]] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        description: str = "",
+    ):
+        """Initialize a symbol instance.
+        
+        Args:
+            type (SymbolType): Type of the symbol (action, equipment, ingredient, etc.)
+            name (str): The name of the symbol
+            entity_id (Optional[int], optional): Database ID of the symbol, if known. Defaults to None.
+            canonical_form (Optional[Tuple[int, str]], optional): The standard form of the symbol. Defaults to None.
+            identities (Optional[Set[str]]): Set of hierarchical identity strings. Defaults to None.
+            properties (Optional[Dict[str, Any]], optional): Key-value pairs for symbol properties. Defaults to None.
+            description (str, optional): Text description of the symbol. Defaults to "".
+        """
+        self.type = type
+        self.name = name
+        self.entity_id = entity_id
         self.canonical_form = canonical_form
-        self.aliases = aliases
+        self.identities = identities or set()
+        self.properties = properties or {}
         self.description = description
+
+    @property
+    def name(self) -> str:
+        """Get the name of the symbol.
         
-        # DAG node properties (only used when symbol_type == ACTION)
-        self._input_nodes: Set['Symbol'] = set()  # Items consumed by this action
-        self._output_nodes: Set['Symbol'] = set()  # Items produced by this action
+        Returns:
+            str: The name of the symbol
+        """
+        return self._name
     
-    @property
-    def symbol_type(self) -> SymbolType:
-        """Get the symbol type."""
-        return self._symbol_type
+    @name.setter
+    def name(self, value: str) -> None:
+        """Set the name of the symbol.
+
+        Args:
+            value (str): The new name of the symbol
+        """
+        self._name = value
     
-    @symbol_type.setter
-    def symbol_type(self, value: SymbolType) -> None:
-        """Set the symbol type."""
-        if not isinstance(value, SymbolType):
-            raise TypeError("Symbol type must be a SymbolType enum")
-        self._symbol_type = value
-    
-    @property
-    def categories(self) -> Set[str]:
-        """Get the categories set."""
-        return self._categories.copy()
-    
-    @categories.setter
-    def categories(self, value: Set[str]) -> None:
-        """Set the categories."""
-        if not isinstance(value, set):
-            raise TypeError("Categories must be a set")
-        self._categories = value
-    
-    @property
-    def canonical_form(self) -> str:
-        """Get the canonical form."""
-        return self._canonical_form
-    
-    @canonical_form.setter
-    def canonical_form(self, value: str) -> None:
-        """Set the canonical form."""
-        if not isinstance(value, str):
-            raise TypeError("Canonical form must be a string")
-        self._canonical_form = value
-    
-    @property
-    def aliases(self) -> Set[str]:
-        """Get the aliases set."""
-        return self._aliases.copy()
-    
-    @aliases.setter
-    def aliases(self, value: Set[str]) -> None:
-        """Set the aliases."""
-        if not isinstance(value, set):
-            raise TypeError("Aliases must be a set")
-        self._aliases = value
-    
-    @property
-    def description(self) -> str:
-        """Get the description."""
-        return self._description
-    
-    @description.setter
-    def description(self, value: str) -> None:
-        """Set the description."""
-        if not isinstance(value, str):
-            raise TypeError("Description must be a string")
-        self._description = value
-    
-    # DAG node properties (for ACTION symbols)
-    @property
-    def input_nodes(self) -> Set['Symbol']:
-        """Get input nodes (items consumed by this action)."""
-        return self._input_nodes.copy()
-    
-    @property
-    def output_nodes(self) -> Set['Symbol']:
-        """Get output nodes (items produced by this action)."""
-        return self._output_nodes.copy()
-    
-    # DAG node management methods (for ACTION symbols)
-    def add_input_node(self, item: 'Symbol') -> None:
-        """Add an input node (item consumed by this action)."""
-        if self.symbol_type != SymbolType.ACTION:
-            raise ValueError("Only ACTION symbols can have input/output nodes")
-        from .item import Item
-        if not isinstance(item, (Item, Symbol)):
-            raise TypeError("Input node must be an Item or Symbol")
-        self._input_nodes.add(item)
-    
-    def add_output_node(self, item: 'Symbol') -> None:
-        """Add an output node (item produced by this action)."""
-        if self.symbol_type != SymbolType.ACTION:
-            raise ValueError("Only ACTION symbols can have input/output nodes")
-        from .item import Item
-        if not isinstance(item, (Item, Symbol)):
-            raise TypeError("Output node must be an Item or Symbol")
-        self._output_nodes.add(item)
-    
-    def remove_input_node(self, item: 'Symbol') -> None:
-        """Remove an input node."""
-        self._input_nodes.discard(item)
-    
-    def remove_output_node(self, item: 'Symbol') -> None:
-        """Remove an output node."""
-        self._output_nodes.discard(item)
-    
-    # Operator analysis methods (for ACTION symbols)
+    # Predicate Methods
     def is_operator(self) -> bool:
-        """Check if this symbol represents an operator (action)."""
-        return self.symbol_type == SymbolType.ACTION
-    
-    def get_operator_arity(self) -> str:
-        """Get the arity type of this operator based on its categories."""
-        if not self.is_operator():
-            return "not_operator"
+        """Check if this symbol represents an operation.
         
-        for category in self.categories:
-            if category in ["COMBINATION"]:
-                return "n-ary"                              # Multiple operands
-            elif category in ["DIVISION", "SEPARATION"]:
-                return "unary_multi_output"                 # One input, multiple outputs
-            elif category in ["COOKING_METHOD", "PREPARATION_TASK", "TEMPERATURE_CHANGE"]:
-                return "unary"                              # One input, one output
+        Returns:
+            bool: True for operation symbols (actions), False otherwise
+        """
+        return self.type == SymbolType.ACTION
         
-        return "unknown"
-    
-    def __hash__(self) -> int:
-        """Hash method for using symbols in sets."""
-        return hash((self.symbol_type, self.canonical_form))
-    
+    def is_operand(self) -> bool:
+        """Check if this symbol represents an operand.
+        
+        Returns:
+            bool: True for operand symbols (ingredients, equipment), False otherwise
+        """
+        return self.type in (SymbolType.INGREDIENT, SymbolType.EQUIPMENT)
+
+    # Mutator Methods
+    def add_identity(self, identity: str) -> None:
+        """Add a hierarchical identity to this symbol.
+        
+        Args:
+            identity (str): Hierarchical identity string to add
+        """
+        self.identities.add(identity)
+        
+    def remove_identity(self, identity: str) -> bool:
+        """Remove a hierarchical identity from this symbol.
+        
+        Args:
+            identity (str): Identity to remove
+            
+        Returns:
+            bool: True if the identity was removed, False if it wasn't found
+        """
+        if identity in self.identities:
+            self.identities.remove(identity)
+            return True
+        return False
+
+    def set_property(self, key: str, value: str) -> None:
+        """Set a property key-value pair for this symbol.
+        
+        Args:
+            key (str): Property key
+            value (str): Property value
+        """
+        self.properties[key] = value
+        
+    def remove_property(self, key: str) -> bool:
+        """Remove a property from this symbol.
+        
+        Args:
+            key (str): Property key to remove
+            
+        Returns:
+            bool: True if the property was removed, False if it wasn't found
+        """
+        if key in self.properties:
+            del self.properties[key]
+            return True
+        return False
+
+    # Equality and Hashing
     def __eq__(self, other) -> bool:
-        """Equality comparison based on type and canonical form."""
+        """Check equality based on type, canonical form, and entity_id."""
         if not isinstance(other, Symbol):
             return False
-        return (self.symbol_type == other.symbol_type and 
-                self.canonical_form == other.canonical_form)
+        return (self.type == other.type and 
+                self.canonical_form == other.canonical_form and
+                self.entity_id == other.entity_id)
+    
+    def __hash__(self) -> int:
+        """Generate hash based on type and canonical form."""
+        return hash((self.type, self.name, self.canonical_form))
+
+    # String Representations
+    def __str__(self) -> str:
+        """Get string representation of this symbol.
+        
+        Returns:
+            str: String representation of format: canonical_form (type)
+        """
+        return f"{self.name} ({self.type.value})"
+        
+    def __repr__(self) -> str:
+        """Get detailed string representation of this symbol for debugging.
+        
+        Returns:
+            str: Detailed string representation
+        """
+        return (f"Symbol(type={self.type.value}, "
+                f"name='{self.name}', "
+                f"entity_id={self.entity_id}, "
+                f"canonical_form={self.canonical_form}, "
+                f"identities={len(self.identities)}, "
+                f"properties={len(self.properties)})")

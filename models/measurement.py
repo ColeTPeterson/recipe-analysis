@@ -4,7 +4,46 @@ supporting both absolute measurements and relative (range-based) measurements.
 
 from abc import ABC
 from typing import Optional
-from .symbol import Symbol
+
+from .symbol import SymbolType, Symbol
+
+
+class Unit(Symbol):
+    """Represents a unit of measurement used in recipe analysis.
+    Units have canonical forms/aliases and dynamic properties.
+    """
+    def __init__(self, name: str, **kwargs):
+        """Initialize a unit.
+
+        Args:
+            name (str): Name of the unit
+            **kwargs: Additional Symbol parameters
+        """
+        super().__init__(
+            type=SymbolType.UNIT,
+            name=name,
+            **kwargs
+        )
+
+    def __str__(self) -> str:
+        """Get string representation of the unit.
+
+        Returns:
+            str: Unit name
+        """
+        return self.name
+    
+    def __repr__(self) -> str:
+        """Get detailed string representation of the unit for debugging.
+        
+        Returns:
+            str: Detailed representation with identities info
+        """
+        return (f"Unit(name='{self.name}', "
+                f"entity_id={self.entity_id}, "
+                f"identities={len(self.identities)}, "
+                f"properties={len(self.properties)})")
+
 
 class Measurement(ABC):
     """Abstract base for measurements.
