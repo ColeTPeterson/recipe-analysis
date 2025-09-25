@@ -2,41 +2,41 @@
 supporting both absolute and relative dimensions with appropriate units.
 """
 
-from abc import ABC
 from typing import List
-from .symbol import Symbol
 
-class Dimensions(ABC):
-    """Abstract base for physical dimensions.
+from models.measurement import Unit, Quantification
 
-    Attributes:
-        unit (Symbol): Unit of length (Symbol.type=UNIT, category from UnitCategory.LENGTH).
-    """
-    def __init__(self, unit: Symbol):
-        self.unit = unit
+
+class Dimensions(Quantification):
+    """Abstract base class for dimensional measurements."""
+    pass
 
 
 class DimensionsAbs(Dimensions):
-    """Absolute physical dimensions.
-
-    Attributes:
-        values (List[float]): List of exact dimension values (1 to 3 values).
-        unit (Symbol): Unit of length.
-    """
-    def __init__(self, unit: Symbol, values: List[float]):
+    """Absolute dimensions with exact values."""
+    
+    def __init__(self, values: List[float], unit: Unit):
+        """Initialize a DimensionsAbs instance.
+        
+        Args:
+            values: List of dimension values (1-3 values for 1D, 2D, or 3D)
+            unit: Length unit
+        """
         super().__init__(unit)
         self.values = values
 
 
 class DimensionsRel(Dimensions):
-    """Relative physical dimensions (range).
-
-    Attributes:
-        values_min (List[float]): List of minimum dimension values (1 to 3 values).
-        values_max (List[float]): List of maximum dimension values (1 to 3 values).
-        unit (Symbol): Unit of length.
-    """
-    def __init__(self, unit: Symbol, values_min: List[float], values_max: List[float]):
+    """Relative dimensions with min/max ranges."""
+    
+    def __init__(self, values_min: List[float], values_max: List[float], unit: Unit):
+        """Initialize a DimensionsRel instance.
+        
+        Args:
+            values_min: List of minimum dimension values
+            values_max: List of maximum dimension values
+            unit: Length unit
+        """
         super().__init__(unit)
         self.values_min = values_min
         self.values_max = values_max

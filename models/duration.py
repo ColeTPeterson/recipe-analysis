@@ -2,40 +2,39 @@
 supporting both absolute durations and relative (range-based) durations.
 """
 
-from abc import ABC
-from .symbol import Symbol
+from models.measurement import Unit, Quantification
 
-class Duration(ABC):
-    """Abstract base for durations.
 
-    Attributes:
-        unit (Symbol): Unit of time (Symbol.type=UNIT, category from UnitCategory.TIME).
-    """
-    def __init__(self, unit: Symbol):
-        self.unit = unit
+class Duration(Quantification):
+    """Abstract base class for duration measurements."""
+    pass
 
 
 class DurationAbs(Duration):
-    """Absolute duration.
-
-    Attributes:
-        value (float): Absolute duration value.
-        unit (Symbol): Unit of time.
-    """
-    def __init__(self, unit: Symbol,  value: float):
+    """Absolute duration with exact value."""
+    
+    def __init__(self, value: float, unit: Unit):
+        """Initialize a DurationAbs instance.
+        
+        Args:
+            value: Exact duration value
+            unit: Unit of time measurement
+        """
         super().__init__(unit)
         self.value = value
 
 
 class DurationRel(Duration):
-    """Relative duration (range).
-
-    Attributes:
-        value_min (float): Minimum duration value.
-        value_max (float): Maximum duration value.
-        unit (Symbol): Unit of time.
-    """
-    def __init__(self, unit: Symbol, value_min: float, value_max: float):
+    """Relative duration with min/max range."""
+    
+    def __init__(self, value_min: float, value_max: float, unit: Unit):
+        """Initialize a DurationRel instance.
+        
+        Args:
+            value_min: Minimum duration value
+            value_max: Maximum duration value
+            unit: Unit of time measurement
+        """
         super().__init__(unit)
         self.value_min = value_min
         self.value_max = value_max

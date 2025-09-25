@@ -5,6 +5,7 @@ to hierarchical identities and properties stored separately.
 
 from enum import Enum
 from typing import Optional, Tuple, Set, Dict, Any
+from abc import ABC
 
 
 class SymbolType(Enum):
@@ -15,9 +16,11 @@ class SymbolType(Enum):
     UNIT = "unit"
 
 
-class Symbol:
+class Symbol(ABC):
     """Represents a symbol in recipe analysis;
     they are units that make up the recipe itself.
+    
+    This is an abstract base class that should be inherited by specific symbol types.
     """
     
     def __init__(
@@ -158,7 +161,7 @@ class Symbol:
         Returns:
             str: Detailed string representation
         """
-        return (f"Symbol(type={self.type.value}, "
+        return (f"{self.__class__.__name__}(type={self.type.value}, "
                 f"name='{self.name}', "
                 f"entity_id={self.entity_id}, "
                 f"canonical_form={self.canonical_form}, "

@@ -45,26 +45,48 @@ class Unit(Symbol):
                 f"properties={len(self.properties)})")
 
 
-class Measurement(ABC):
-    """Abstract base for measurements.
-
-    Attributes:
-        unit (Optional[Symbol]): Unit of measurement (Symbol.type=UNIT).
-                                 Optional if only value exists (Abs) or if only unit exists (Rel)
-                                 as per diagram note, but class boxes imply required for subclasses.
+class Quantification(ABC):
+    """Abstract base class for all measurement types in recipes.
+    
+    All quantifications have at minimum a unit (which may be optional in some cases)
+    and provide a get_unit method.
     """
-    def __init__(self, unit: Optional[Symbol]):
+    
+    def __init__(self, unit: Optional[Symbol] = None):
+        """Initialize a Quantification with a unit.
+        
+        Args:
+            unit: Unit of measurement (can be None in some special cases)
+        """
         self.unit = unit
+    
+    def get_unit(self) -> Optional[Symbol]:
+        """Return the measurement unit.
+        
+        Returns:
+            Optional[Symbol]: The unit used for this measurement
+        """
+        return self.unit
+
+
+class Measurement(Quantification):
+    """Abstract base class for measurements."""
+    pass
 
 
 class MeasurementAbs(Measurement):
     """Absolute measurement.
 
     Attributes:
-        unit (Optional[Symbol]): Unit of measurement. Optional if only value exists.
-        value (Optional[float]): Absolute value. Optional if only unit exists.
+        value (Optional[float]): Absolute value
     """
-    def __init__(self, unit: Optional[Symbol] = None, value: Optional[float] = None):
+    def __init__(self, unit: Optional[Unit] = None, value: Optional[float] = None):
+        """Initialize an absolute measurement.
+        
+        Args:
+            unit: Unit of measurement (optional)
+            value: Absolute value (optional)
+        """
         super().__init__(unit)
         self.value = value
 
@@ -73,14 +95,20 @@ class MeasurementRel(Measurement):
     """Relative measurement (range).
 
     Attributes:
-        value_min (Optional[float]): Minimum value. Optional if only unit exists.
-        value_max (Optional[float]): Maximum value. Optional if only unit exists.
-        unit (Optional[Symbol]): Unit of measurement. Optional if only min/max values exist.
+        value_min (Optional[float]): Minimum value
+        value_max (Optional[float]): Maximum value
     """
     def __init__(self,
-                 unit: Optional[Symbol] = None,
+                 unit: Optional[Unit] = None,
                  value_min: Optional[float] = None,
                  value_max: Optional[float] = None):
+        """Initialize a relative measurement.
+        
+        Args:
+            unit: Unit of measurement (optional)
+            value_min: Minimum value (optional)
+            value_max: Maximum value (optional)
+        """
         super().__init__(unit)
         self.value_min = value_min
         self.value_max = value_max
