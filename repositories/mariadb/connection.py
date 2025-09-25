@@ -14,6 +14,7 @@ from config.database import get_mariadb_config
 
 logger = logging.getLogger(__name__)
 
+
 class MariaDBConnectionManager:
     """Singleton connection manager for MariaDB database.
     Implements the singleton pattern to maintain a single connection per instance.

@@ -3,7 +3,7 @@ stored in MongoDB, including recipe documents and their associated metadata.
 """
 
 from .connection import MongoDBConnectionManager
-from .recipe import RecipeRepository
+from .recipe_repository import RecipeRepository
 
 __all__ = [
     'MongoDBConnectionManager',

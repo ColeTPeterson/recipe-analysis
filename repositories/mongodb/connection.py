@@ -3,14 +3,15 @@ handles connection creation, management, and resource cleanup through context ma
 """
 
 import logging
-from contextlib import contextmanager
-from typing import Generator
+import os
+import json
+from typing import Optional, Dict, Any, List
 
 import pymongo
 from pymongo import MongoClient
+from pymongo.collection import Collection
 from pymongo.database import Database
-
-from config.database import get_mongodb_config
+from pymongo.errors import ServerSelectionTimeoutError, ConnectionFailure
 
 logger = logging.getLogger(__name__)
 
@@ -24,87 +25,153 @@ class MongoDBConnectionManager:
         _instance (MongoDBConnectionManager): Singleton instance reference
     """
     _instance = None
-
-    def __init__(self):
-        """Initialize the connection manager with configuration settings."""
-        self.db_config = get_mongodb_config()
-        self._client = None
-
+    _client: Optional[MongoClient] = None
+    _db: Optional[Database] = None
+    _connection_error: Optional[Exception] = None
+    
+    # MongoDB configuration for different environments
+    configs = {
+        'dev': {
+            'host': os.environ.get('MONGODB_HOST', 'localhost'),
+            'port': int(os.environ.get('MONGODB_PORT', '27017')),
+            'database': os.environ.get('MONGODB_DATABASE', 'recipe_analysis_dev'),
+            'username': os.environ.get('MONGODB_USER'),
+            'password': os.environ.get('MONGODB_PASSWORD'),
+            'auth_source': os.environ.get('MONGODB_AUTH_SOURCE', 'admin')
+        },
+        'test': {
+            'host': os.environ.get('MONGODB_HOST', 'localhost'),
+            'port': int(os.environ.get('MONGODB_PORT', '27017')),
+            'database': 'recipe_analysis_test',
+            'username': os.environ.get('MONGODB_USER'),
+            'password': os.environ.get('MONGODB_PASSWORD'),
+            'auth_source': os.environ.get('MONGODB_AUTH_SOURCE', 'admin')
+        },
+        'prod': {
+            'host': os.environ.get('MONGODB_HOST', 'localhost'),
+            'port': int(os.environ.get('MONGODB_PORT', '27017')),
+            'database': 'recipe_analysis_prod',
+            'username': os.environ.get('MONGODB_USER'),
+            'password': os.environ.get('MONGODB_PASSWORD'),
+            'auth_source': os.environ.get('MONGODB_AUTH_SOURCE', 'admin')
+        }
+    }
+    
     def __new__(cls):
-        """Create or return the singleton instance of the connection manager.
+        """Ensure only one instance of the connection manager exists.
         
         Returns:
             MongoDBConnectionManager: The singleton instance
         """
         if cls._instance is None:
             cls._instance = super(MongoDBConnectionManager, cls).__new__(cls)
-            cls._instance.__init__()
+            cls._instance._initialize()
         return cls._instance
     
-    def connect(self) -> MongoClient:
-        """Establish a connection to the MongoDB database. If a connection already exists,
-        returns the existing connection. Otherwise, creates a new connection using the configured parameters.
+    def _initialize(self):
+        """Initialize the database connection."""
+        self._connect()
+    
+    def _connect(self) -> bool:
+        """Connect to MongoDB.
         
         Returns:
-            MongoClient: An active MongoDB client connection
+            bool: True if connection was successful
+        """
+        try:
+            # Get environment or default to 'dev'
+            env = os.environ.get('APP_ENV', 'dev').lower()
+            config = self.configs.get(env, self.configs.get('dev'))
+            
+            # Connection string with or without authentication
+            if config.get('username') and config.get('password'):
+                # Use authentication
+                auth_source = config.get('auth_source', 'admin')
+                uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={auth_source}"
+            else:
+                # No authentication
+                uri = f"mongodb://{config['host']}:{config['port']}"
+                
+            client_options = {
+                'serverSelectionTimeoutMS': 5000  # 5 second timeout
+            }
+            if config.get('srv'):
+                client_options['tlsAllowInvalidCertificates'] = True
+                
+            self._client = pymongo.MongoClient(uri, **client_options)
+            self._db = self._client[config['database']]
+            
+            # Test the connection
+            self._client.admin.command('ping')
+            
+            logger.info(f"Connected to MongoDB database: {config['database']}")
+            self._connection_error = None
+            return True
+            
+        except Exception as e:
+            self._connection_error = e
+            logger.error(f"Error connecting to MongoDB: {e}")
+            return False
+    
+    def get_collection(self, collection_name: str) -> Collection:
+        """Get a MongoDB collection.
+        
+        Args:
+            collection_name (str): Name of the collection to access
+            
+        Returns:
+            Collection: The MongoDB collection object
             
         Raises:
-            pymongo.errors.ConnectionFailure: If the connection attempt fails
+            ConnectionError: If not connected to MongoDB
         """
-        if self._client is None:
-            try:
-                if self.db_config.get('username') and self.db_config.get('password'):
-                    auth_source = self.db_config.get('auth_source', 'admin')
-                    uri = f"mongodb://{self.db_config['username']}:{self.db_config['password']}@{self.db_config['host']}:{self.db_config['port']}/?authSource={auth_source}"
-                else:
-                    uri = f"mongodb://{self.db_config['host']}:{self.db_config['port']}/"
-
-                self._client = pymongo.MongoClient(uri)
-                self._client.admin.command('ping')
-                logger.info("Connected to MongoDB")
-            except pymongo.errors.ConnectionFailure as e:
-                logger.error(f"Error connecting to MongoDB: {e}")
-                raise
-        return self._client
-    
-    def get_database(self) -> Database:
-        """Get a MongoDB database instance using the configured database name.
+        if self._db is None:
+            if self._connection_error is None:
+                self._connect()
+            
+            if self._db is None:
+                err_msg = str(self._connection_error) if self._connection_error else "Unknown connection error"
+                raise ConnectionError(f"Not connected to MongoDB: {err_msg}")
+        
+        collection = self._db[collection_name]
+        return collection
+        
+    def ping(self) -> bool:
+        """Check if the MongoDB connection is alive.
         
         Returns:
-            Database: MongoDB database instance
+            bool: True if connected, False otherwise
         """
-        client = self.connect()
-        db_name = self.db_config.get('database', 'recipe_analysis')
-        if not db_name:
-            db_name = 'recipe_analysis'
-        return client[db_name]
+        if not self._client:
+            return False
+            
+        try:
+            self._client.admin.command('ping')
+            return True
+        except Exception:
+            return False
     
-    def close(self) -> None:
-        """Close the active MongoDB connection if it exists."""
+    def close(self):
+        """Close the MongoDB connection."""
         if self._client:
             self._client.close()
             self._client = None
-            logger.info("MongoDB connection closed")
-
-    @contextmanager
-    def get_collection(self, collection_name: str) ->  Generator[pymongo.collection.Collection, None, None]:
-        """Context manager for MongoDB collections.
-                
-        Args:
-            collection_name (str): Name of the MongoDB collection to access
+            self._db = None
             
-        Yields:
-            pymongo.collection.Collection: The requested MongoDB collection
-            
-        Example:
-            ```
-            with connection_manager.get_collection('recipes') as collection:
-                results = collection.find({'cuisine': 'Italian'})
-            ```
+    def connection_status(self) -> Dict[str, Any]:
+        """Get detailed connection status.
+        
+        Returns:
+            Dict[str, Any]: Connection status information
         """
-        db = self.get_database()
-        collection = db[collection_name]
-        try:
-            yield collection
-        finally:
-            pass
+        status = {
+            'connected': self._client is not None and self._db is not None,
+            'error': str(self._connection_error) if self._connection_error else None,
+            'database': self._db.name if self._db else None,
+            'collections': []
+        }
+        
+        if self._db:
+            status['collections'] = self._db.list_collection_names()
+            
+        return status

@@ -3,9 +3,9 @@ MariaDB databases, including symbol definitions, ingredients, and equipment.
 """
 
 from .connection import MariaDBConnectionManager
-from .symbol import SymbolRepository
-from .ingredient import IngredientRepository
-from .equipment import EquipmentRepository
+from .symbol_repository import SymbolRepository
+from .ingredient_repository import IngredientRepository
+from .equipment_repository import EquipmentRepository
 
 __all__ = [
     'MariaDBConnectionManager',
