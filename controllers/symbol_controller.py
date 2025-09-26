@@ -6,7 +6,7 @@ import logging
 from typing import List, Optional, TypeVar, Generic, Type
 
 from models.symbol import Symbol, SymbolType
-from repositories.mariadb.symbol_repository import SymbolRepository
+from repositories.symbol_repository import SymbolRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,16 @@ class SymbolController(Generic[S]):
     providing methods for retrieving and managing symbols.
     """
     
-    def __init__(self, symbol_class: Type[S] = None):
-        """Initialize the symbol controller with required repositories."""
+    def __init__(self, symbol_class: Type[S] = None, symbol_type: SymbolType = None):
+        """Initialize the symbol controller with required repositories.
+        
+        Args:
+            symbol_class (Type[S], optional): The symbol class this controller manages. Defaults to None.
+            symbol_type (SymbolType, optional): The type of symbols this controller manages. Defaults to None.
+        """
         self.repository = SymbolRepository()
         self.symbol_class = symbol_class
+        self.symbol_type = symbol_type
 
     # Read Operations
     def get_all_symbols(self) -> List[Symbol]:
@@ -51,34 +57,18 @@ class SymbolController(Generic[S]):
             logger.error(f"Error retrieving symbol {symbol_id}: {e}")
             return None
     
-    def get_symbols_by_type(self, type: SymbolType) -> List[Symbol]:
-        """Retrieve all symbols of a specific type.
-
-        Args:
-            type (SymbolType): The type of the symbols to retrieve
-
-        Returns:
-            List[Symbol]: A list of Symbols of the specified type 
-        """
-        try:
-            return self.repository.get_symbols_by_type(type)
-        except Exception as e:
-            logger.error(f"Error retrieving symbols of type {type}: {e}")
-            return []
-
     # Search Operations
-    def find_symbols_by_name(self, name: str, type: Optional[SymbolType] = None) -> List[Symbol]:
+    def find_symbols_by_name(self, name: str) -> List[Symbol]:
         """Find symbols by name and optionally by type.
         
         Args:
             name (str): Name or partial name to search for
-            type (Optional[SymbolType]): Type of symbols to find
             
         Returns:
             List[Symbol]: List of matching symbols
         """
         try:
-            return self.repository.find_symbols_by_name(name, type)
+            return self.repository.find_symbols_by_name(name)
         except Exception as e:
             logger.error(f"Error searching symbols by name '{name}': {e}")
             return []

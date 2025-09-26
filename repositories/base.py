@@ -37,7 +37,6 @@ class BaseRepository(Generic[T], abc.ABC):
         pass
     
     # Search Operations
-    @abc.abstractmethod
     def find_by(self, criteria: Dict[str, Any]) -> List[T]:
         """Find entities matching the specified criteria.
         
@@ -47,7 +46,7 @@ class BaseRepository(Generic[T], abc.ABC):
         Returns:
             List[T]: List of matching entities
         """
-        pass
+        raise NotImplementedError("find_by method not implemented")
 
     # Create/Update/Delete Operations
     @abc.abstractmethod

@@ -5,8 +5,9 @@ mediates between unit repositories and domain models.
 import logging
 from typing import List, Optional, Dict
 
+from models.symbol import SymbolType
 from models.measurement import Unit
-from repositories.mariadb.unit_repository import UnitRepository
+from repositories.symbol_repository import SymbolRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class UnitController:
     
     def __init__(self):
         """Initialize the unit controller with required dependencies."""
-        self.repository = UnitRepository()
+        self.repository = SymbolRepository(SymbolType.UNIT)
 
     # Read Operations
     def get_all_units(self) -> List[Unit]:
@@ -54,7 +55,7 @@ class UnitController:
         Returns:
             List[str]: List of all unit identity names
         """
-        return self.repository.get_all_unit_identities()
+        return self.repository.get_all_identities()
     
     def get_all_unit_properties(self) -> List[str]:
         """Get all unit property keys.
@@ -62,7 +63,7 @@ class UnitController:
         Returns:
             List[str]: List of all unit property keys
         """
-        return self.repository.get_all_unit_properties()
+        return self.repository.get_all_properties()
 
     def get_all_unit_property_values(self) -> Dict[str, List[str]]:
         """Get all unit property keys and their values.
@@ -70,7 +71,7 @@ class UnitController:
         Returns:
             Dict[str, List[str]]: Dictionary with property keys as keys and list of values as values
         """
-        return self.repository.get_all_unit_property_values()
+        return self.repository.get_all_property_values()
 
     # Search Operations
     def find_units_by_name(self, name: str) -> List[Unit]:
@@ -83,7 +84,7 @@ class UnitController:
             List[Unit]: List of matching units
         """
         try:
-            return self.repository.find_by_name(name)
+            return self.repository.find_symbols_by_name(name)
         except Exception as e:
             logger.error(f"Error searching units by name '{name}': {e}")
             return []
@@ -98,7 +99,7 @@ class UnitController:
             List[Unit]: List of units with the specified identity
         """
         try:
-            return self.repository.find_by_identity(identity)
+            return self.repository.find_identities_by_name(identity)
         except Exception as e:
             logger.error(f"Error searching units by identity '{identity}': {e}")
             return []
@@ -112,7 +113,7 @@ class UnitController:
         Returns:
             List[str]: List of matching unit identity names
         """
-        return self.repository.find_unit_identities_by_name(name_pattern)
+        return self.repository.find_identities_by_name(name_pattern)
     
     def find_unit_properties_by_name(self, name_pattern: str) -> List[str]:
         """Find unit property keys by name pattern.
@@ -123,7 +124,7 @@ class UnitController:
         Returns:
             List[str]: List of matching unit property keys
         """
-        return self.repository.find_unit_properties_by_name(name_pattern)
+        return self.repository.find_properties_by_name(name_pattern)
 
     # Create/Update/Delete Operations
     def create(self, unit: Unit) -> Optional[Unit]:

@@ -5,8 +5,9 @@ mediates between action repositories and domain models.
 import logging
 from typing import List, Optional, Dict
 
+from models.symbol import SymbolType
 from models.instruction import Action, ActionArity
-from repositories.mariadb.action_repository import ActionRepository
+from repositories.symbol_repository import SymbolRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class ActionController:
     
     def __init__(self):
         """Initialize the action controller with required dependencies."""
-        self.repository = ActionRepository()
+        self.repository = SymbolRepository(SymbolType.ACTION)
 
     # Read Operations
     def get_all_actions(self) -> List[Action]:
@@ -54,7 +55,7 @@ class ActionController:
         Returns:
             List[str]: List of all action identity names
         """
-        return self.repository.get_all_action_identities()
+        return self.repository.get_all_identities()
     
     def get_all_action_properties(self) -> List[str]:
         """Get all action property keys.
@@ -62,7 +63,7 @@ class ActionController:
         Returns:
             List[str]: List of all action property keys
         """
-        return self.repository.get_all_action_properties()
+        return self.repository.get_all_properties()
     
     # Search Operations
     def find_actions_by_name(self, name: str) -> List[Action]:
@@ -75,24 +76,9 @@ class ActionController:
             List[Action]: List of matching actions
         """
         try:
-            return self.repository.find_by_name(name)
+            return self.repository.find_symbols_by_name(name)
         except Exception as e:
             logger.error(f"Error searching actions by name '{name}': {e}")
-            return []
-
-    def find_actions_by_arity(self, arity: ActionArity) -> List[Action]:
-        """Find actions by their arity.
-        
-        Args:
-            arity (ActionArity): The arity to search for
-            
-        Returns:
-            List[Action]: List of actions with the specified arity
-        """
-        try:
-            return self.repository.find_by_arity(arity)
-        except Exception as e:
-            logger.error(f"Error searching actions by arity {arity}: {e}")
             return []
     
     def find_action_identities_by_name(self, name_pattern: str) -> List[str]:
@@ -104,7 +90,7 @@ class ActionController:
         Returns:
             List[str]: List of matching action identity names
         """
-        return self.repository.find_action_identities_by_name(name_pattern)
+        return self.repository.find_identities_by_name(name_pattern)
     
     def find_action_properties_by_name(self, name_pattern: str) -> List[str]:
         """Find action property keys by name pattern.
@@ -115,7 +101,7 @@ class ActionController:
         Returns:
             List[str]: List of matching action property keys
         """
-        return self.repository.find_action_properties_by_name(name_pattern)
+        return self.repository.find_properties_by_name(name_pattern)
 
     # Create/Update/Delete Operations
     def create(self, action: Action) -> Optional[Action]:
@@ -220,4 +206,4 @@ class ActionController:
         Returns:
             Dict[str, List[str]]: Dictionary with property keys as keys and list of values as values
         """
-        return self.repository.get_all_action_property_values()
+        return self.repository.get_all_property_values()

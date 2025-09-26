@@ -2,11 +2,12 @@
 Handles CRUD operations for recipe symbols (actions, equipment, ingredients, etc.)
 using the canonical/alias pattern.
 """
+
 import logging
-from typing import List, Optional, Set, Dict, Any, TypeVar, Generic
+from typing import List, Optional, Set, Dict, Any, TypeVar
 
 from repositories.base import BaseRepository
-from repositories.mariadb.connection import MariaDBConnectionManager
+from repositories.connection import MariaDBConnectionManager
 from models.symbol import Symbol, SymbolType
 from models.instruction import ActionArity
 
@@ -18,9 +19,14 @@ logger = logging.getLogger(__name__)
 class SymbolRepository(BaseRepository[S]):
     """Provides data access methods for symbol-related operations in SQL."""
     
-    def __init__(self):
-        """Creates a MariaDBConnectionManager instance to handle database connections."""
+    def __init__(self, symbol_type: SymbolType = None):
+        """Creates a MariaDBConnectionManager instance to handle database connections.
+        
+        Args:
+            symbol_type (SymbolType, optional): The type of symbol this repository handles. Defaults to None.
+        """
         self.connection_manager = MariaDBConnectionManager()
+        self.symbol_type = symbol_type
     
         self._table_mapping = {
             SymbolType.ACTION: 'actions',
@@ -31,18 +37,22 @@ class SymbolRepository(BaseRepository[S]):
 
     # Read Operations 
     def get_all(self) -> List[Symbol]:
-        """Retrieve all symbols from all symbol types.
+        """Retrieve all symbols of the repository's symbol type.
+        If no symbol type is set, retrieves all symbols from all types.
                 
         Returns:
-            List[Symbol]: List of all Symbol instances across all types
+            List[Symbol]: List of all Symbol instances
         """
-        symbols = []
-        for symbol_type in SymbolType:
-            try:
-                symbols.extend(self.get_symbols_by_type(symbol_type))
-            except Exception as e:
-                logger.warning(f"Error retrieving symbols of type {symbol_type}: {e}")
-        return symbols
+        if not self.symbol_type:
+            symbols = []
+            for symbol_type in SymbolType:
+                try:
+                    symbols.extend(self._get_symbols_by_type(symbol_type))
+                except Exception as e:
+                    logger.warning(f"Error retrieving symbols of type {symbol_type}: {e}")
+            return symbols
+        else:
+            return self._get_symbols_by_type(self.symbol_type)
         
     def get_by_id(self, symbol_id: int) -> Optional[Symbol]:
         """Retrieve a symbol by its database ID.
@@ -53,13 +63,16 @@ class SymbolRepository(BaseRepository[S]):
         Returns:
             Optional[Symbol]: Symbol if found, None otherwise
         """
+        if self.symbol_type:
+            return self._get_symbol_by_id_and_type(symbol_id, self.symbol_type)
+            
         for symbol_type in SymbolType:
             symbol = self._get_symbol_by_id_and_type(symbol_id, symbol_type)
             if symbol:
                 return symbol       
         return None
-        
-    def get_symbols_by_type(self, symbol_type: SymbolType) -> List[Symbol]:
+    
+    def _get_symbols_by_type(self, symbol_type: SymbolType) -> List[Symbol]:
         """Retrieve all symbols of a specific type.
 
         Args:
@@ -91,12 +104,10 @@ class SymbolRepository(BaseRepository[S]):
         
         return symbols
 
-    def get_all_identities(self, symbol_type: Optional[SymbolType] = None) -> List[str]:
-        """Get all identities, optionally filtered by symbol type.
+    def get_all_identities(self) -> List[str]:
+        """Get all identities for the repository's symbol type.
+        If no symbol type is set, returns identities for all types.
         
-        Args:
-            symbol_type (Optional[SymbolType]): Optional symbol type to filter by
-            
         Returns:
             List[str]: List of all identity names
         """
@@ -105,14 +116,14 @@ class SymbolRepository(BaseRepository[S]):
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    if symbol_type:
+                    if self.symbol_type:
                         query = """
                             SELECT DISTINCT si.identity_name
                             FROM symbol_identities si
                             WHERE si.symbol_type = %s
                             ORDER BY si.identity_name
                         """
-                        cursor.execute(query, (symbol_type.value.upper(),))
+                        cursor.execute(query, (self.symbol_type.value.upper(),))
                     else:
                         query = """
                             SELECT DISTINCT identity_name
@@ -125,16 +136,14 @@ class SymbolRepository(BaseRepository[S]):
                         identities.append(row['identity_name'])
                         
         except Exception as e:
-            logger.error(f"Error retrieving identities for type {symbol_type}: {e}")
+            logger.error(f"Error retrieving identities for type {self.symbol_type}: {e}")
             
         return identities
     
-    def get_all_properties(self, symbol_type: Optional[SymbolType] = None) -> List[str]:
-        """Get all property keys, optionally filtered by symbol type.
+    def get_all_properties(self) -> List[str]:
+        """Get all property keys for the repository's symbol type.
+        If no symbol type is set, returns properties for all types.
         
-        Args:
-            symbol_type (Optional[SymbolType]): Optional symbol type to filter by
-            
         Returns:
             List[str]: List of all property keys
         """
@@ -143,14 +152,14 @@ class SymbolRepository(BaseRepository[S]):
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    if symbol_type:
+                    if self.symbol_type:
                         query = """
                             SELECT DISTINCT sp.property_key
                             FROM symbol_properties sp
                             WHERE sp.symbol_type = %s
                             ORDER BY sp.property_key
                         """
-                        cursor.execute(query, (symbol_type.value.upper(),))
+                        cursor.execute(query, (self.symbol_type.value.upper(),))
                     else:
                         query = """
                             SELECT DISTINCT property_key
@@ -163,16 +172,14 @@ class SymbolRepository(BaseRepository[S]):
                         properties.append(row['property_key'])
                         
         except Exception as e:
-            logger.error(f"Error retrieving properties for type {symbol_type}: {e}")
+            logger.error(f"Error retrieving properties for type {self.symbol_type}: {e}")
             
         return properties
 
-    def get_all_property_values(self, symbol_type: Optional[SymbolType] = None) -> Dict[str, List[str]]:
-        """Get all property keys and their values, optionally filtered by symbol type.
+    def get_all_property_values(self) -> Dict[str, List[str]]:
+        """Get all property keys and their values for the repository's symbol type.
+        If no symbol type is set, returns property values for all types.
         
-        Args:
-            symbol_type (Optional[SymbolType]): Optional symbol type to filter by
-            
         Returns:
             Dict[str, List[str]]: Dictionary with property keys as keys and list of values as values
         """
@@ -181,14 +188,14 @@ class SymbolRepository(BaseRepository[S]):
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    if symbol_type:
+                    if self.symbol_type:
                         query = """
                             SELECT DISTINCT property_key, property_value
                             FROM symbol_properties
                             WHERE symbol_type = %s
                             ORDER BY property_key, property_value
                         """
-                        symbol_type_val = symbol_type.value.upper()
+                        symbol_type_val = self.symbol_type.value.upper()
                         logger.debug(f"Executing query with symbol_type={symbol_type_val}: {query}")
                         cursor.execute(query, (symbol_type_val,))
                     else:
@@ -211,79 +218,42 @@ class SymbolRepository(BaseRepository[S]):
             logger.debug(f"Retrieved property values: {property_values}")
                         
         except Exception as e:
-            logger.error(f"Error retrieving property values for type {symbol_type}: {e}")
+            logger.error(f"Error retrieving property values for type {self.symbol_type}: {e}")
             
         return property_values
 
     # Search Operations
-    def find_by(self, criteria: Dict[str, Any]) -> List[Symbol]:
-        """Find symbols matching the criteria.
-        
-        Args:
-            criteria (Dict[str, Any]): Search criteria
-            
-        Returns:
-            List[Symbol]: List of matching symbols
-        """
-        symbols = []
-        
-        symbol_type = None
-        table_name = None
-        
-        # Extract type from criteria if present
-        criteria_copy = criteria.copy()
-        if 'type' in criteria_copy:
-            type_value = criteria_copy.pop('type')
-            if isinstance(type_value, str):
-                for t in SymbolType:
-                    if t.value == type_value:
-                        symbol_type = t
-                        break
-            else:
-                symbol_type = type_value
-                
-            table_name = self._get_table_name_for_type(symbol_type)
-        
-        if not table_name:
-            # Search across all symbol types
-            for sym_type in SymbolType:
-                table = self._get_table_name_for_type(sym_type)
-                symbols.extend(self._find_in_table(criteria_copy, table, sym_type))
-        else:
-            # Search specific symbol type
-            symbols.extend(self._find_in_table(criteria_copy, table_name, symbol_type))
-            
-        return symbols
-      
-    # find_by should handle all of these finding functions
-    def find_symbols_by_name(self, name: str, symbol_type: Optional[SymbolType] = None) -> List[Symbol]:
-        """Find symbols by name with optional type filtering.
+    def find_symbols_by_name(self, name: str) -> List[Symbol]:
+        """Find symbols by name.
         Searches both canonical and alias tables for matching names.
 
         Args:
             name (str): The name to search for (partial matches supported)
-            symbol_type (Optional[SymbolType], optional): Optional symbol type to filter by. Defaults to None.
 
         Returns:
             List[Symbol]: List of matching Symbol instances
         """
         symbols = []
-        search_types = [symbol_type] if symbol_type else list(SymbolType)
 
-        for symbol_type in search_types:
+        if self.symbol_type:
             try:
-                symbols.extend(self._search_symbols_in_tables(name, symbol_type))
+                symbols.extend(self._search_symbols_in_tables(name, self.symbol_type))
             except Exception as e:
-                logger.warning(f"Error searching symbols of type {symbol_type}: {e}")
+                logger.warning(f"Error searching symbols of type {self.symbol_type}: {e}")
+        else:
+            for symbol_type in SymbolType:
+                try:
+                    symbols.extend(self._search_symbols_in_tables(name, symbol_type))
+                except Exception as e:
+                    logger.warning(f"Error searching symbols of type {symbol_type}: {e}")
 
         return symbols
 
-    def find_identities_by_name(self, name_pattern: str, symbol_type: Optional[SymbolType] = None) -> List[str]:
-        """Find identities by name pattern, optionally filtered by symbol type.
+    def find_identities_by_name(self, name_pattern: str) -> List[str]:
+        """Find identities by name pattern.
         
         Args:
             name_pattern (str): Pattern to search for in identity names
-            symbol_type (Optional[SymbolType]): Optional symbol type to filter by
             
         Returns:
             List[str]: List of matching identity names
@@ -293,14 +263,14 @@ class SymbolRepository(BaseRepository[S]):
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    if symbol_type:
+                    if self.symbol_type:
                         query = """
                             SELECT DISTINCT si.identity_name
                             FROM symbol_identities si
                             WHERE si.symbol_type = %s AND si.identity_name LIKE %s
                             ORDER BY si.identity_name
                         """
-                        cursor.execute(query, (symbol_type.value.upper(), f"%{name_pattern}%"))
+                        cursor.execute(query, (self.symbol_type.value.upper(), f"%{name_pattern}%"))
                     else:
                         query = """
                             SELECT DISTINCT identity_name
@@ -314,16 +284,15 @@ class SymbolRepository(BaseRepository[S]):
                         identities.append(row['identity_name'])
                         
         except Exception as e:
-            logger.error(f"Error finding identities by pattern '{name_pattern}' for type {symbol_type}: {e}")
+            logger.error(f"Error finding identities by pattern '{name_pattern}' for type {self.symbol_type}: {e}")
             
         return identities
     
-    def find_properties_by_name(self, name_pattern: str, symbol_type: Optional[SymbolType] = None) -> List[str]:
-        """Find property keys by name pattern, optionally filtered by symbol type.
+    def find_properties_by_name(self, name_pattern: str) -> List[str]:
+        """Find property keys by name pattern.
         
         Args:
             name_pattern (str): Pattern to search for in property keys
-            symbol_type (Optional[SymbolType]): Optional symbol type to filter by
             
         Returns:
             List[str]: List of matching property keys
@@ -333,14 +302,14 @@ class SymbolRepository(BaseRepository[S]):
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    if symbol_type:
+                    if self.symbol_type:
                         query = """
                             SELECT DISTINCT sp.property_key
                             FROM symbol_properties sp
                             WHERE sp.symbol_type = %s AND sp.property_key LIKE %s
                             ORDER BY sp.property_key
                         """
-                        cursor.execute(query, (symbol_type.value.upper(), f"%{name_pattern}%"))
+                        cursor.execute(query, (self.symbol_type.value.upper(), f"%{name_pattern}%"))
                     else:
                         query = """
                             SELECT DISTINCT property_key
@@ -354,7 +323,7 @@ class SymbolRepository(BaseRepository[S]):
                         properties.append(row['property_key'])
                         
         except Exception as e:
-            logger.error(f"Error finding properties by pattern '{name_pattern}' for type {symbol_type}: {e}")
+            logger.error(f"Error finding properties by pattern '{name_pattern}' for type {self.symbol_type}: {e}")
             
         return properties
 
@@ -368,16 +337,21 @@ class SymbolRepository(BaseRepository[S]):
         Returns:
             Optional[Symbol]: The created symbol with ID assigned, or None if failed
         """
+        if not self.symbol_type and not hasattr(entity, 'type'):
+            raise ValueError("Cannot create symbol without a type")
+            
+        entity_type = self.symbol_type if self.symbol_type else entity.type
+            
         try:        
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    table_name = self._get_table_name_for_type(entity.type)
+                    table_name = self._get_table_name_for_type(entity_type)
                     
                     if not table_name:
-                        raise ValueError(f"Unsupported symbol type: {entity.type}")
+                        raise ValueError(f"Unsupported symbol type: {entity_type}")
                         
                     # Insert into canonical table with type-specific columns
-                    if entity.type == SymbolType.ACTION:
+                    if entity_type == SymbolType.ACTION:
                         arity_value = None
                         if hasattr(entity, 'arity') and getattr(entity, 'arity'):
                             arity_value = getattr(entity, 'arity').value.upper()
@@ -434,16 +408,21 @@ class SymbolRepository(BaseRepository[S]):
         if not entity.entity_id:
             raise ValueError("Cannot update symbol without ID")
             
+        if not self.symbol_type and not hasattr(entity, 'type'):
+            raise ValueError("Cannot update symbol without a type")
+            
+        entity_type = self.symbol_type if self.symbol_type else entity.type
+            
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    table_name = self._get_table_name_for_type(entity.type)
+                    table_name = self._get_table_name_for_type(entity_type)
                     
                     if not table_name:
-                        raise ValueError(f"Unsupported symbol type: {entity.type}")
+                        raise ValueError(f"Unsupported symbol type: {entity_type}")
                         
                     # Update canonical table with type-specific columns
-                    if entity.type == SymbolType.ACTION:
+                    if entity_type == SymbolType.ACTION:
                         arity_value = None
                         if hasattr(entity, 'arity') and getattr(entity, 'arity'):
                             arity_value = getattr(entity, 'arity').value.upper()
@@ -486,9 +465,15 @@ class SymbolRepository(BaseRepository[S]):
         Returns:
             bool: True if deletion was successful, False otherwise
         """
+        if self.symbol_type:
+            table_name = self._get_table_name_for_type(self.symbol_type)
+            symbol_types = [self.symbol_type]
+        else:
+            symbol_types = list(SymbolType)
+            
         success = False
         
-        for symbol_type in SymbolType:
+        for symbol_type in symbol_types:
             table_name = self._get_table_name_for_type(symbol_type)
             
             try:
@@ -524,7 +509,19 @@ class SymbolRepository(BaseRepository[S]):
     # Helper Methods   
     def _find_in_table(self, criteria: Dict[str, Any], table_name: str, 
                       symbol_type: SymbolType) -> List[Symbol]:
-        """Helper to find symbols in a specific table."""
+        """Helper to find symbols in a specific table matching the given criteria.
+            
+        Args:
+            criteria (Dict[str, Any]): Search criteria key-value pairs
+            table_name (str): Name of the table to search in
+            symbol_type (SymbolType): Type of symbol to map results to
+            
+        Returns:
+            List[Symbol]: List of matching Symbol instances
+            
+        Raises:
+            ValueError: If the table name is invalid or criteria contains unsupported fields
+        """
         results = []
         
         try:
@@ -691,6 +688,8 @@ class SymbolRepository(BaseRepository[S]):
 
     def _create_identities_and_properties(self, entity: Symbol) -> None:
         """Create identity and property mappings for a symbol."""
+        entity_type = self.symbol_type if self.symbol_type else entity.type
+        
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
@@ -712,7 +711,7 @@ class SymbolRepository(BaseRepository[S]):
                             INSERT IGNORE INTO symbol_identity_mapping 
                             (symbol_id, symbol_type, identity_id)
                             VALUES (%s, %s, %s)
-                        """, (entity.entity_id, entity.type.value.upper(), identity_id))
+                        """, (entity.entity_id, entity_type.value.upper(), identity_id))
                     
                     # Create properties
                     for key, value in entity.properties.items():
@@ -733,7 +732,7 @@ class SymbolRepository(BaseRepository[S]):
                             INSERT IGNORE INTO symbol_property_mapping 
                             (symbol_id, symbol_type, property_id)
                             VALUES (%s, %s, %s)
-                        """, (entity.entity_id, entity.type.value.upper(), property_id))
+                        """, (entity.entity_id, entity_type.value.upper(), property_id))
                     
                     connection.commit()
         except Exception as e:
@@ -741,6 +740,8 @@ class SymbolRepository(BaseRepository[S]):
 
     def _update_identities_and_properties(self, entity: Symbol) -> None:
         """Update identity and property mappings for a symbol."""
+        entity_type = self.symbol_type if self.symbol_type else entity.type
+        
         try:
             with self.connection_manager.get_connection() as connection:
                 with connection.cursor() as cursor:
@@ -748,12 +749,12 @@ class SymbolRepository(BaseRepository[S]):
                     cursor.execute("""
                         DELETE FROM symbol_identity_mapping 
                         WHERE symbol_id = %s AND symbol_type = %s
-                    """, (entity.entity_id, entity.type.value.upper()))
+                    """, (entity.entity_id, entity_type.value.upper()))
                     
                     cursor.execute("""
                         DELETE FROM symbol_property_mapping 
                         WHERE symbol_id = %s AND symbol_type = %s
-                    """, (entity.entity_id, entity.type.value.upper()))
+                    """, (entity.entity_id, entity_type.value.upper()))
                     
                     connection.commit()
                     
@@ -800,7 +801,14 @@ class SymbolRepository(BaseRepository[S]):
             return None
         
     def _get_table_name_for_type(self, symbol_type: SymbolType) -> str:
-        """Convert symbol type to table name."""
+        """Convert symbol type enum to corresponding database table name.
+            
+        Args:
+            symbol_type (SymbolType): The symbol type to map
+            
+        Returns:
+            str: Table name corresponding to the symbol type, or empty string if not found
+        """
         return self._table_mapping.get(symbol_type, '')
 
     def _get_alias_column_name(self, table_name: str) -> str:

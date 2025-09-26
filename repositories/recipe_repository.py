@@ -1,6 +1,6 @@
-"""Provides data access operations for recipe documents stored in MongoDB;
-handles CRUD operations for recipes, including querying by various criteria,
-with integration to MariaDB for relational metadata.
+"""Provides data access methods for recipe-related operations;
+Handles document storage in MongoDB for recipe data while
+maintaining relational metadata in MariaDB for efficient querying and indexing.
 """
 
 import logging
@@ -9,8 +9,7 @@ from typing import List, Optional, Dict, Any, Union
 from bson import ObjectId
 
 from repositories.base import BaseRepository
-from repositories.mongodb.connection import MongoDBConnectionManager
-from repositories.mariadb.connection import MariaDBConnectionManager
+from repositories.connection import MariaDBConnectionManager, MongoDBConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,8 @@ class RecipeRepository(BaseRepository[Dict[str, Any]]):
     
     def __init__(self):
         """Initialize the recipe repository with required dependencies."""
+        self.mariadb_connection_manager = MariaDBConnectionManager()        
         self.mongo_connection_manager = MongoDBConnectionManager()
-        self.mariadb_connection_manager = MariaDBConnectionManager()
 
     # Read Operations  
     def get_all(self) -> List[Dict[str, Any]]:

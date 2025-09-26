@@ -5,8 +5,9 @@ mediates between ingredient repositories and domain models.
 import logging
 from typing import List, Optional, Dict
 
+from models.symbol import SymbolType
 from models.ingredient import Ingredient
-from repositories.mariadb.ingredient_repository import IngredientRepository
+from repositories.symbol_repository import SymbolRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class IngredientController:
     
     def __init__(self):
         """Initialize the ingredient controller with required dependencies."""
-        self.repository = IngredientRepository()
+        self.repository = SymbolRepository(SymbolType.INGREDIENT)
 
     # Read Operations
     def get_all_ingredients(self) -> List[Ingredient]:
@@ -54,7 +55,7 @@ class IngredientController:
         Returns:
             List[str]: List of all ingredient identity names
         """
-        return self.repository.get_all_ingredient_identities()
+        return self.repository.get_all_identities()
     
     def get_all_ingredient_properties(self) -> List[str]:
         """Get all ingredient property keys.
@@ -62,7 +63,7 @@ class IngredientController:
         Returns:
             List[str]: List of all ingredient property keys
         """
-        return self.repository.get_all_ingredient_properties()
+        return self.repository.get_all_properties()
 
     def get_all_ingredient_property_values(self) -> Dict[str, List[str]]:
         """Get all ingredient property keys and their values.
@@ -70,7 +71,7 @@ class IngredientController:
         Returns:
             Dict[str, List[str]]: Dictionary with property keys as keys and list of values as values
         """
-        return self.repository.get_all_ingredient_property_values()
+        return self.repository.get_all_property_values()
 
     # Search Operations
     def find_ingredients_by_name(self, name: str) -> List[Ingredient]:
@@ -83,7 +84,7 @@ class IngredientController:
             List[Ingredient]: List of matching ingredients
         """
         try:
-            return self.repository.find_by_name(name)
+            return self.repository.find_symbols_by_name(name)
         except Exception as e:
             logger.error(f"Error searching ingredients by name '{name}': {e}")
             return []
@@ -97,7 +98,7 @@ class IngredientController:
         Returns:
             List[str]: List of matching ingredient identity names
         """
-        return self.repository.find_ingredient_identities_by_name(name_pattern)
+        return self.repository.find_identities_by_name(name_pattern)
     
     def find_ingredient_properties_by_name(self, name_pattern: str) -> List[str]:
         """Find ingredient property keys by name pattern.
@@ -108,7 +109,7 @@ class IngredientController:
         Returns:
             List[str]: List of matching ingredient property keys
         """
-        return self.repository.find_ingredient_properties_by_name(name_pattern)
+        return self.repository.find_properties_by_name(name_pattern)
 
     # Create/Update/Delete Operations
     def create(self, ingredient: Ingredient) -> Optional[Ingredient]:

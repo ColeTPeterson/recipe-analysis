@@ -5,8 +5,9 @@ mediates between equipment repositories and domain models.
 import logging
 from typing import List, Optional, Dict
 
+from models.symbol import SymbolType
 from models.equipment import Equipment
-from repositories.mariadb.equipment_repository import EquipmentRepository
+from repositories.symbol_repository import SymbolRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class EquipmentController:
     
     def __init__(self):
         """Initialize the equipment controller with required dependencies."""
-        self.repository = EquipmentRepository()
+        self.repository = SymbolRepository(SymbolType.EQUIPMENT)
 
     # Read Operations
     def get_all_equipment(self) -> List[Equipment]:
@@ -54,7 +55,7 @@ class EquipmentController:
         Returns:
             List[str]: List of all equipment identity names
         """
-        return self.repository.get_all_equipment_identities()
+        return self.repository.get_all_identities()
     
     def get_all_equipment_properties(self) -> List[str]:
         """Get all equipment property keys.
@@ -62,7 +63,7 @@ class EquipmentController:
         Returns:
             List[str]: List of all equipment property keys
         """
-        return self.repository.get_all_equipment_properties()
+        return self.repository.get_all_properties()
 
     def get_all_equipment_property_values(self) -> Dict[str, List[str]]:
         """Get all equipment property keys and their values.
@@ -70,7 +71,7 @@ class EquipmentController:
         Returns:
             Dict[str, List[str]]: Dictionary with property keys as keys and list of values as values
         """
-        return self.repository.get_all_equipment_property_values()
+        return self.repository.get_all_property_values()
 
     # Search Operations
     def find_equipment_by_name(self, name: str) -> List[Equipment]:
@@ -83,7 +84,7 @@ class EquipmentController:
             List[Equipment]: List of matching equipment items
         """
         try:
-            return self.repository.find_by_name(name)
+            return self.repository.find_symbols_by_name(name)
         except Exception as e:
             logger.error(f"Error searching equipment by name '{name}': {e}")
             return []
@@ -97,7 +98,7 @@ class EquipmentController:
         Returns:
             List[str]: List of matching equipment identity names
         """
-        return self.repository.find_equipment_identities_by_name(name_pattern)
+        return self.repository.find_identities_by_name(name_pattern)
     
     def find_equipment_properties_by_name(self, name_pattern: str) -> List[str]:
         """Find equipment property keys by name pattern.
@@ -108,7 +109,7 @@ class EquipmentController:
         Returns:
             List[str]: List of matching equipment property keys
         """
-        return self.repository.find_equipment_properties_by_name(name_pattern)
+        return self.repository.find_properties_by_name(name_pattern)
 
     # Create/Update/Delete Operations             
     def create(self, equipment: Equipment) -> Optional[Equipment]:

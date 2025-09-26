@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Optional, Any, Union
 from bson import ObjectId
 
-from repositories.mongodb.recipe_repository import RecipeRepository
+from repositories.recipe_repository import RecipeRepository
 
 logger = logging.getLogger(__name__)
 
